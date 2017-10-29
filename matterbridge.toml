@@ -26,7 +26,7 @@ name="gateway2"
 enable=true
     [[gateway.inout]]
     account="tox.fixlan"
-    channel="#testkz"
+    channel="test autobot"
 
     [[gateway.inout]]
     account="irc.freenode"

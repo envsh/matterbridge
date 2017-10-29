@@ -63,19 +63,22 @@ func New(cfg config.Protocol, account string, c chan config.Message) *Btox {
 func (this *Btox) Send(msg config.Message) (string, error) {
 	log.Printf("%+v", msg)
 	t := this.i
-	gn, found := xtox.ConferenceFind(t, msg.Channel)
+	gns, found := xtox.ConferenceFindAll(t, msg.Channel)
 	if found {
 		tmsg := msg.Username + msg.Text
-		if msg.Event == config.EVENT_USER_ACTION {
-			tmsg = "/me " + tmsg
-			_, err := t.ConferenceSendMessage(gn, tox.MESSAGE_TYPE_NORMAL, tmsg)
-			gopp.ErrPrint(err)
-		} else {
-			_, err := t.ConferenceSendMessage(gn, tox.MESSAGE_TYPE_NORMAL, tmsg)
-			gopp.ErrPrint(err)
+		for _, gn := range gns {
+			groupTitle, _ := t.ConferenceGetTitle(gn)
+			if msg.Event == config.EVENT_USER_ACTION {
+				tmsg = "/me " + tmsg
+				_, err := t.ConferenceSendMessage(gn, tox.MESSAGE_TYPE_ACTION, tmsg)
+				gopp.ErrPrint(err, gn, groupTitle)
+			} else {
+				_, err := t.ConferenceSendMessage(gn, tox.MESSAGE_TYPE_NORMAL, tmsg)
+				gopp.ErrPrint(err, gn, groupTitle)
+			}
 		}
 	} else {
-		log.Println("not found:")
+		log.Println("not found:", msg.Channel)
 	}
 	return "", nil
 }
@@ -84,8 +87,7 @@ var toxctx *xtox.ToxContext
 
 func (this *Btox) Connect() error {
 	log.Println(this.Nick, "===", this.Account, this.Config)
-	this.i.Bootstrap("194.249.212.109", 33445, "3CEE1F054081E7A011234883BC4FC39F661A55B73637A5AC293DDF1251D9432B")
-	this.i.Bootstrap("130.133.110.14", 33445, "461FA3776EF0FA655F1A05477DF1B3B614F7D6B124F7DB1DD4FE3C08B03B640F")
+	xtox.Connect(this.i)
 
 	go this.iterate()
 	return nil
@@ -124,6 +126,7 @@ func (this *Btox) initCallbacks() {
 	t := this.i
 	t.CallbackSelfConnectionStatus(func(_ *tox.Tox, status int, userData interface{}) {
 		log.Println(status, tox.ConnStatusString(status))
+		autoAddNetHelperBots(t, status, userData)
 	}, nil)
 
 	t.CallbackConferenceAction(func(_ *tox.Tox, groupNumber uint32, peerNumber uint32, action string, userData interface{}) {
@@ -135,7 +138,8 @@ func (this *Btox) initCallbacks() {
 	}, nil)
 	t.CallbackFriendConnectionStatus(func(_ *tox.Tox, friendNumber uint32, status int, userData interface{}) {
 		log.Println(friendNumber, status, tox.ConnStatusString(status))
-		t.ConferenceInvite(friendNumber, uint32(0))
+		// t.ConferenceInvite(friendNumber, uint32(0))
+		tryJoinOfficalGroupbotManagedGroups(t)
 	}, nil)
 
 	t.CallbackFriendMessage(func(_ *tox.Tox, friendNumber uint32, msg string, userData interface{}) {
@@ -172,16 +176,22 @@ func (this *Btox) initCallbacks() {
 	}, nil)
 
 	t.CallbackConferenceInvite(func(_ *tox.Tox, friendNumber uint32, itype uint8, data []byte, userData interface{}) {
+		log.Println(friendNumber, itype)
+		var gn uint32
+		var err error
 		switch int(itype) {
 		case tox.CONFERENCE_TYPE_TEXT:
-			_, err := t.ConferenceJoin(friendNumber, data)
+			gn, err = t.ConferenceJoin(friendNumber, data)
 			gopp.ErrPrint(err)
 		case tox.CONFERENCE_TYPE_AV:
-			t.JoinAVGroupChat(friendNumber, data)
+			gn_, err_ := t.JoinAVGroupChat(friendNumber, data)
+			gn, err = uint32(gn_), err_
 		}
+		toxaa.onGroupInvited(int(gn))
 	}, nil)
 
 	t.CallbackConferenceNameListChange(func(_ *tox.Tox, groupNumber uint32, peerNumber uint32, change uint8, userData interface{}) {
+		checkOnlyMeLeftGroup(t, int(groupNumber), int(peerNumber), change)
 	}, nil)
 
 }
@@ -190,13 +200,27 @@ func (this *Btox) initCallbacks() {
 func (this *Btox) iterate() {
 	stop := false
 	tick := time.NewTicker(1 * time.Second / 5)
+	tick2 := time.NewTicker(5 * time.Second) // for tryJoin
 	for !stop {
 		select {
 		case <-tick.C:
 			this.i.Iterate2(nil)
 		case <-this.disC:
 			stop = true
+		case <-tick2.C:
+			tryJoinOfficalGroupbotManagedGroups(this.i)
+		case gn := <-toxaa.delGroupC:
+			t := this.i
+			isInvited := xtox.IsInvitedGroup(t, uint32(gn))
+			if isInvited {
+			}
+			removedInvitedGroup(t, gn)
+			if isInvited {
+				// tryJoinOfficalGroupbotManagedGroups(t, friendNumber uint32, status int)
+			} else {
+				// re create and re pull friend to join in
+			}
 		}
 	}
-	log.Println("stopped")
+	log.Println("disconnected")
 }
