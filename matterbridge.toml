@@ -1,0 +1,44 @@
+
+[general]
+# RemoteNickFormat="[{PROTOCOL}] <{NICK}> "
+RemoteNickFormat="[{NICK}@{PROTOCOL}] "
+StripNick=false
+
+[irc]
+    [irc.freenode]
+    Server="irc.freenode.net:6697"
+    Nick="matterbot3"
+    UseTLS=true
+
+    [irc.freenode2]
+    Server="irc.freenode.net:6697"
+    Nick="matterbot2"
+    UseTLS=true
+
+[tox]
+    [tox.fixlan]
+    Server="ddd"
+    Nick="zuck06"
+
+
+[[gateway]]
+name="gateway2"
+enable=true
+    [[gateway.inout]]
+    account="tox.fixlan"
+    channel="#testkz"
+
+    [[gateway.inout]]
+    account="irc.freenode"
+    channel="#testk"
+
+[[gateway]]
+name="gateway1"
+enable=false
+    [[gateway.inout]]
+    account="irc.freenode"
+    channel="#testk"
+
+    [[gateway.inout]]
+    account="irc.freenode2"
+    channel="#rtab123"
