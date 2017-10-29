@@ -12,6 +12,7 @@ import (
 	"github.com/42wim/matterbridge/bridge/slack"
 	"github.com/42wim/matterbridge/bridge/steam"
 	"github.com/42wim/matterbridge/bridge/telegram"
+	"github.com/42wim/matterbridge/bridge/tox"
 	"github.com/42wim/matterbridge/bridge/xmpp"
 	log "github.com/Sirupsen/logrus"
 
@@ -55,6 +56,9 @@ func New(cfg *config.Config, bridge *config.Bridge, c chan config.Message) *Brid
 	case "irc":
 		b.Config = cfg.IRC[name]
 		b.Bridger = birc.New(cfg.IRC[name], bridge.Account, c)
+	case "tox":
+		b.Config = cfg.Tox[name]
+		b.Bridger = btox.New(cfg.Tox[name], bridge.Account, c)
 	case "gitter":
 		b.Config = cfg.Gitter[name]
 		b.Bridger = bgitter.New(cfg.Gitter[name], bridge.Account, c)

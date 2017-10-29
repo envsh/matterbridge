@@ -1,12 +1,13 @@
 package config
 
 import (
-	"github.com/BurntSushi/toml"
 	"log"
 	"os"
 	"reflect"
 	"strings"
 	"time"
+
+	"github.com/BurntSushi/toml"
 )
 
 const (
@@ -125,6 +126,7 @@ type SameChannelGateway struct {
 type Config struct {
 	Api                map[string]Protocol
 	IRC                map[string]Protocol
+	Tox                map[string]Protocol
 	Mattermost         map[string]Protocol
 	Matrix             map[string]Protocol
 	Slack              map[string]Protocol
