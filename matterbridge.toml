@@ -27,10 +27,36 @@ enable=true
     [[gateway.inout]]
     account="tox.fixlan"
     channel="test autobot"
+    passive=true
+
+    #[[gateway.inout]]
+    #account="irc.freenode"
+    #channel="#testk"
+
+[[gateway]]
+name="gateway-tox-en"
+enable=true
 
     [[gateway.inout]]
-    account="irc.freenode"
-    channel="#testk"
+    account="tox.fixlan"
+    channel="Tox Public Chat for beautiful ladies"
+
+[[gateway]]
+name="gateway-tox-cn"
+enable=true
+
+    [[gateway.inout]]
+    account="tox.fixlan"
+    channel="Chinese 中文"
+
+[[gateway]]
+name="gateway-tox-ru"
+enable=true
+
+    [[gateway.inout]]
+    account="tox.fixlan"
+    channel="Club Cyberia: No Pedos or Pervs"
+
 
 [[gateway]]
 name="gateway1"

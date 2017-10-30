@@ -24,6 +24,8 @@ type Btox struct {
 	Account         string
 	FirstConnection bool
 	disC            chan struct{}
+
+	store *Storage
 }
 
 // var flog *log.Entry
@@ -53,6 +55,9 @@ func New(cfg config.Protocol, account string, c chan config.Message) *Btox {
 	}
 	b.FirstConnection = true
 	b.disC = make(chan struct{}, 0)
+
+	store := newStorage()
+	b.store = store
 
 	toxctx = xtox.NewToxContext("matbrg.tsbin", b.Nick, "matbrg for tox")
 	b.i = xtox.New(toxctx)
@@ -112,6 +117,7 @@ func (this *Btox) JoinChannel(channel config.ChannelInfo) error {
 		gn_, err := t.ConferenceNew()
 		gopp.ErrPrint(err)
 		t.ConferenceSetTitle(gn_, channel.Name)
+		log.Println("New group created:", gn_, channel.Name)
 	}
 	return nil
 }
@@ -151,6 +157,7 @@ func (this *Btox) initCallbacks() {
 		gopp.ErrPrint(err)
 		_ = friendName
 
+		this.processFriendCmd(friendNumber, msg)
 	}, nil)
 
 	t.CallbackConferenceMessage(func(_ *tox.Tox, groupNumber uint32, peerNumber uint32, message string, userData interface{}) {
@@ -194,6 +201,14 @@ func (this *Btox) initCallbacks() {
 		checkOnlyMeLeftGroup(t, int(groupNumber), int(peerNumber), change)
 	}, nil)
 
+	t.CallbackConferenceTitle(func(_ *tox.Tox, groupNumber uint32, peerNumber uint32, title string, userData interface{}) {
+		// TODO 防止其他用户修改标题
+		peerPubkey, err := t.ConferencePeerGetPublicKey(groupNumber, peerNumber)
+		gopp.ErrPrint(err)
+		if peerPubkey != t.SelfGetPublicKey() {
+			// restore initilized group title
+		}
+	}, nil)
 }
 
 // should block
