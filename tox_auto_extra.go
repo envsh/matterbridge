@@ -23,12 +23,14 @@ var nethlpbots = []string{
 	//, // LainBot@toxme.io,
 }
 
+// TODO sync锁
 // tox 实例的一些自动化行为整理
 type toxAutoAction struct {
 	delGroupC chan int // 用于删除被邀群的channel，被主tox循环使用
 
 	theirGroups map[int]bool // accepted group number => true
 
+	initGroupNames map[uint32]string
 }
 
 func newToxAutoAction() *toxAutoAction {
@@ -36,6 +38,8 @@ func newToxAutoAction() *toxAutoAction {
 	this.delGroupC = make(chan int, 16)
 
 	this.theirGroups = make(map[int]bool)
+
+	this.initGroupNames = make(map[uint32]string)
 
 	return this
 }
@@ -95,7 +99,7 @@ func removedInvitedGroup(t *tox.Tox, groupNumber int) error {
 	groupTitle, err := t.ConferenceGetTitle(uint32(groupNumber))
 	gopp.ErrPrint(err)
 	if xtox.IsInvitedGroup(t, uint32(groupNumber)) {
-		log.Println("Deleting group: ", groupNumber, groupTitle)
+		log.Println("Delete invited group: ", groupNumber, groupTitle)
 		delete(toxaa.theirGroups, groupNumber)
 		_, err = t.ConferenceDelete(uint32(groupNumber))
 		gopp.ErrPrint(err)
@@ -133,12 +137,12 @@ func checkOnlyMeLeftGroup(t *tox.Tox, groupNumber int, peerNumber int, change ui
 	// check only me left case
 	if change == tox.CHAT_CHANGE_PEER_DEL {
 		if pn := t.GroupNumberPeers(groupNumber); pn == 1 {
-			log.Println("oh, only me left:", groupNumber, groupTitle)
+			log.Println("oh, only me left:", groupNumber, groupTitle, xtox.IsInvitedGroup(t, uint32(groupNumber)))
 			// check our create group or not
 			// 即使不是自己创建的群组，在只剩下自己之后，也可以不删除。因为这个群的所有人就是自己了。
 			// 这里找一下为什么程序会崩溃吧
 			if _, ok := this.theirGroups[groupNumber]; ok {
-				log.Println("their invite group matched, clean it", groupNumber, groupTitle)
+				log.Println("invited group matched, clean it", groupNumber, groupTitle)
 				delete(this.theirGroups, groupNumber)
 				grptype, err := t.GroupGetType(uint32(groupNumber))
 				log.Println("before delete group chat", groupNumber, grptype, err)
@@ -155,7 +159,7 @@ func checkOnlyMeLeftGroup(t *tox.Tox, groupNumber int, peerNumber int, change ui
 					this.delGroupC <- groupNumber
 					// why not delete here? deadlock? crash?
 				})
-				log.Println("hehhe----------------------------")
+				log.Println("Rename....", groupTitle, makeDeletedGroupName(groupTitle))
 				t.GroupSetTitle(groupNumber, makeDeletedGroupName(groupTitle))
 				log.Println("dont delete invited groupchat for a try", groupNumber, ok, err)
 			}
@@ -183,9 +187,14 @@ func isGroupbot(pubkey string) bool { return strings.HasPrefix(groupbot, pubkey)
 
 // raw group name map
 var fixedGroups = map[string]string{
+	// "tox-en": "invite 0",
 	// "Official Tox groupchat": "invite 0",
-	// "Chinese 中文":             "invite 1",
+	"Tox Public Chat for beautiful ladies": "invite 0",
+	// "Chinese 中文":                           "invite 1",
+	// "tox-cn": "invite 1",
+	// "tox-ru": "invite 3",
 	// "Club Cyberia": "invite 3",
+	// "Club Cyberia: No Pedos or Pervs": "invite 3",
 	"test autobot": "invite 4",
 	// "Russian Tox Chat (Use kalina@toxme.io or 12EDB939AA529641CE53830B518D6EB30241868EE0E5023C46A372363CAEC91C2C948AEFE4EB": "invite 5",
 }
@@ -226,7 +235,7 @@ func tryJoinOfficalGroupbotManagedGroups(t *tox.Tox) {
 		curGroups[gt] = gn
 	}
 
-	// 查找群是否是当前的某个群
+	// 查找群是否是当前的某个群，相似比较
 	incurrent := func(name string) bool {
 		for groupTitle, gn := range curGroups {
 			isInvited := xtox.IsInvitedGroup(t, uint32(gn))
