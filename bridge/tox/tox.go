@@ -97,10 +97,18 @@ func (this *Btox) Connect() error {
 	go this.iterate()
 	return nil
 }
+
 func (this *Btox) JoinChannel(channel config.ChannelInfo) error {
 	log.Printf("%+v\n", channel)
 	t := this.i
 
+	// check passive group name
+	if rname, ok := isOfficialGroupbotManagedGroups(channel.Name); ok {
+		log.Println("It's should be invited group, don't create.", channel.Name, rname)
+		return nil
+	}
+
+	//
 	grptitles := xtox.ConferenceAllTitles(t)
 	found := false
 	gn := uint32(math.MaxUint32)
@@ -117,6 +125,8 @@ func (this *Btox) JoinChannel(channel config.ChannelInfo) error {
 		gn_, err := t.ConferenceNew()
 		gopp.ErrPrint(err)
 		t.ConferenceSetTitle(gn_, channel.Name)
+		log.Println("Saving initGroupNames:", gn_, channel.Name, toxaa.initGroupNamesLen())
+		toxaa.initGroupNames.LoadOrStore(gn_, channel.Name)
 		log.Println("New group created:", gn_, channel.Name)
 	}
 	return nil
@@ -194,6 +204,12 @@ func (this *Btox) initCallbacks() {
 			gn_, err_ := t.JoinAVGroupChat(friendNumber, data)
 			gn, err = uint32(gn_), err_
 		}
+		// 在刚Join的group是无法获得title的
+		if false {
+			groupTitle, err := t.ConferenceGetTitle(gn)
+			gopp.ErrPrint(err)
+			log.Println(gn, groupTitle)
+		}
 		toxaa.onGroupInvited(int(gn))
 	}, nil)
 
@@ -202,12 +218,8 @@ func (this *Btox) initCallbacks() {
 	}, nil)
 
 	t.CallbackConferenceTitle(func(_ *tox.Tox, groupNumber uint32, peerNumber uint32, title string, userData interface{}) {
-		// TODO 防止其他用户修改标题
-		peerPubkey, err := t.ConferencePeerGetPublicKey(groupNumber, peerNumber)
-		gopp.ErrPrint(err)
-		if peerPubkey != t.SelfGetPublicKey() {
-			// restore initilized group title
-		}
+		// 防止其他用户修改标题
+		tryKeepGroupTitle(t, groupNumber, peerNumber, title)
 	}, nil)
 }
 

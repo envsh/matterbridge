@@ -5,10 +5,13 @@ import (
 	"gopp"
 	"log"
 	"strings"
+	"sync"
 	"time"
 
 	tox "github.com/kitech/go-toxcore"
 	"github.com/kitech/go-toxcore/xtox"
+	textdistance "github.com/masatana/go-textdistance"
+	"github.com/xrash/smetrics"
 )
 
 var groupbot = "56A1ADE4B65B86BCD51CC73E2CD4E542179F47959FE3E0E21B4B0ACDADE51855D34D34D37CB5"
@@ -30,7 +33,7 @@ type toxAutoAction struct {
 
 	theirGroups map[int]bool // accepted group number => true
 
-	initGroupNames map[uint32]string
+	initGroupNames sync.Map // uint32=>string group number => group title
 }
 
 func newToxAutoAction() *toxAutoAction {
@@ -39,12 +42,19 @@ func newToxAutoAction() *toxAutoAction {
 
 	this.theirGroups = make(map[int]bool)
 
-	this.initGroupNames = make(map[uint32]string)
-
 	return this
 }
 
 var toxaa = newToxAutoAction()
+
+func (this *toxAutoAction) initGroupNamesLen() int {
+	length := 0
+	this.initGroupNames.Range(func(key interface{}, value interface{}) bool {
+		length++
+		return true
+	})
+	return length
+}
 
 // 需要与 tox iterate并列执行的函数
 // 比如执行删除群的操作。这个操作如果在iterate中执行，会导致程序崩溃。
@@ -101,6 +111,7 @@ func removedInvitedGroup(t *tox.Tox, groupNumber int) error {
 	if xtox.IsInvitedGroup(t, uint32(groupNumber)) {
 		log.Println("Delete invited group: ", groupNumber, groupTitle)
 		delete(toxaa.theirGroups, groupNumber)
+		toxaa.initGroupNames.Delete(uint32(groupNumber))
 		_, err = t.ConferenceDelete(uint32(groupNumber))
 		gopp.ErrPrint(err)
 
@@ -113,12 +124,22 @@ func removedInvitedGroup(t *tox.Tox, groupNumber int) error {
 	return nil
 }
 
+// 检查群组中是否只有自己了，来自 callback name list change
+// 但是只需要关注 PEER_DEL事件
 func checkOnlyMeLeftGroup(t *tox.Tox, groupNumber int, peerNumber int, change uint8) {
 	this := toxaa
 
+	switch change {
+	case tox.CHAT_CHANGE_PEER_DEL:
+	case tox.CHAT_CHANGE_PEER_ADD:
+		return
+	case tox.CHAT_CHANGE_PEER_NAME:
+		return
+	}
+
 	groupTitle, err := t.GroupGetTitle(groupNumber)
 	if err != nil {
-		log.Println("wtf", err, groupNumber, peerNumber)
+		log.Println("wtf", err, groupNumber, peerNumber, change)
 	}
 	peerName, err := t.GroupPeerName(groupNumber, peerNumber)
 	if err != nil {
@@ -128,41 +149,33 @@ func checkOnlyMeLeftGroup(t *tox.Tox, groupNumber int, peerNumber int, change ui
 	}
 	// var peerPubkey string
 
-	switch change {
-	case tox.CHAT_CHANGE_PEER_DEL:
-	case tox.CHAT_CHANGE_PEER_ADD:
-	case tox.CHAT_CHANGE_PEER_NAME:
-	}
-
 	// check only me left case
-	if change == tox.CHAT_CHANGE_PEER_DEL {
-		if pn := t.GroupNumberPeers(groupNumber); pn == 1 {
-			log.Println("oh, only me left:", groupNumber, groupTitle, xtox.IsInvitedGroup(t, uint32(groupNumber)))
-			// check our create group or not
-			// 即使不是自己创建的群组，在只剩下自己之后，也可以不删除。因为这个群的所有人就是自己了。
-			// 这里找一下为什么程序会崩溃吧
-			if _, ok := this.theirGroups[groupNumber]; ok {
-				log.Println("invited group matched, clean it", groupNumber, groupTitle)
-				delete(this.theirGroups, groupNumber)
-				grptype, err := t.GroupGetType(uint32(groupNumber))
-				log.Println("before delete group chat", groupNumber, grptype, err)
-				switch uint8(grptype) {
-				case tox.GROUPCHAT_TYPE_AV:
-					// log.Println("dont delete av groupchat for a try", groupNumber, ok, err)
-				case tox.GROUPCHAT_TYPE_TEXT:
-					// ok, err := this._tox.DelGroupChat(groupNumber)
-					// log.Println("after delete group chat", groupNumber, ok, err)
-				default:
-					log.Fatal("wtf")
-				}
-				time.AfterFunc(1*time.Second, func() {
-					this.delGroupC <- groupNumber
-					// why not delete here? deadlock? crash?
-				})
-				log.Println("Rename....", groupTitle, makeDeletedGroupName(groupTitle))
-				t.GroupSetTitle(groupNumber, makeDeletedGroupName(groupTitle))
-				log.Println("dont delete invited groupchat for a try", groupNumber, ok, err)
+	if pn := t.GroupNumberPeers(groupNumber); pn == 1 {
+		log.Println("oh, only me left:", groupNumber, groupTitle, xtox.IsInvitedGroup(t, uint32(groupNumber)))
+		// check our create group or not
+		// 即使不是自己创建的群组，在只剩下自己之后，也可以不删除。因为这个群的所有人就是自己了。
+		// 这里找一下为什么程序会崩溃吧
+		if _, ok := this.theirGroups[groupNumber]; ok {
+			log.Println("invited group matched, clean it", groupNumber, groupTitle)
+			delete(this.theirGroups, groupNumber)
+			grptype, err := t.GroupGetType(uint32(groupNumber))
+			log.Println("before delete group chat", groupNumber, grptype, err)
+			switch uint8(grptype) {
+			case tox.GROUPCHAT_TYPE_AV:
+				// log.Println("dont delete av groupchat for a try", groupNumber, ok, err)
+			case tox.GROUPCHAT_TYPE_TEXT:
+				// ok, err := this._tox.DelGroupChat(groupNumber)
+				// log.Println("after delete group chat", groupNumber, ok, err)
+			default:
+				log.Fatal("wtf")
 			}
+			time.AfterFunc(1*time.Second, func() {
+				this.delGroupC <- groupNumber
+				// why not delete here? deadlock? crash?
+			})
+			log.Println("Rename....", groupTitle, makeDeletedGroupName(groupTitle))
+			t.GroupSetTitle(groupNumber, makeDeletedGroupName(groupTitle))
+			log.Println("dont delete invited groupchat for a try", groupNumber, ok, err)
 		}
 	}
 
@@ -194,8 +207,8 @@ var fixedGroups = map[string]string{
 	// "tox-cn": "invite 1",
 	// "tox-ru": "invite 3",
 	// "Club Cyberia": "invite 3",
-	// "Club Cyberia: No Pedos or Pervs": "invite 3",
-	"test autobot": "invite 4",
+	"Club Cyberia: No Pedos or Pervs": "invite 3",
+	"test autobot":                    "invite 4",
 	// "Russian Tox Chat (Use kalina@toxme.io or 12EDB939AA529641CE53830B518D6EB30241868EE0E5023C46A372363CAEC91C2C948AEFE4EB": "invite 5",
 }
 
@@ -203,15 +216,28 @@ var fixedGroups = map[string]string{
 func isOfficialGroupbotManagedGroups(name string) (rname string, ok bool) {
 	for n, _ := range fixedGroups {
 		if name == n {
-			rname = n
-			return
+			return n, true
 		}
 	}
+
+	// 再次尝试采用相似度计算法
+	for n, _ := range fixedGroups {
+		if false {
+			dis := textdistance.JaroWinklerDistance(n, name)
+			_ = dis
+		}
+
+		dis := smetrics.JaroWinkler(n, name, 0.75, 5)
+		if dis > 0.750 {
+			log.Println(n, name, dis, dis > 0.750)
+			return n, true
+		}
+	}
+
 	// 再次尝试采用前缀对比法
 	for n, _ := range fixedGroups {
 		if len(name) > 5 && strings.HasPrefix(n, name) {
-			rname = n
-			return
+			return n, true
 		}
 	}
 	return
@@ -239,12 +265,24 @@ func tryJoinOfficalGroupbotManagedGroups(t *tox.Tox) {
 	incurrent := func(name string) bool {
 		for groupTitle, gn := range curGroups {
 			isInvited := xtox.IsInvitedGroup(t, uint32(gn))
-			if !isInvited {
+			if !isInvited { // 被邀请的群组才有查找意义
 				continue
 			}
+
 			if groupTitle == name {
 				return true
 			}
+
+			if false {
+				dis := textdistance.JaroWinklerDistance(groupTitle, name)
+				_ = dis
+			}
+			dis := smetrics.JaroWinkler(groupTitle, name, 0.75, 5)
+			if dis > 0.750 {
+				log.Println(groupTitle, name, dis, dis > 0.750)
+				return true
+			}
+
 			if strings.HasPrefix(groupTitle, name) {
 				return true
 			}
@@ -253,13 +291,44 @@ func tryJoinOfficalGroupbotManagedGroups(t *tox.Tox) {
 	}
 
 	// 不在这群，或者在这群，但只自己在了
+	// TODO 在发送前，通过info得到现有的群组列表。如果不存在这个群组，则不要发送invite了
 	for name, handler := range fixedGroups {
 		if !incurrent(name) {
-			log.Println(name, handler)
+			log.Println("Try join:", name, handler)
 			n, err := t.FriendSendMessage(friendNumber, handler)
-			if err != nil {
-				log.Println(err, n)
+			gopp.ErrPrint(err, n, friendNumber, name, handler)
+		}
+	}
+}
+
+// 保持群组名称，防止其他用户修改标题，来自CallbackConferenceTitle
+func tryKeepGroupTitle(t *tox.Tox, groupNumber uint32, peerNumber uint32, title string) {
+	// 在这调用这个函数不安全，有时成功，有时失败
+	peerPubkey, err := t.ConferencePeerGetPublicKey(groupNumber, peerNumber)
+	_ = err
+
+	// 防止其他用户修改标题
+	ovalue, ok := toxaa.initGroupNames.Load(groupNumber)
+	if ok {
+		if ovalue.(string) != title {
+			// 无法取到peerPubkey时，恢复title
+			// 或者取了peerPubkey，但不是自己时恢复title
+			// 就是说，如果取到了peerPubkey并且是自己，是可以设置新title的
+			if peerPubkey == "" || (peerPubkey != "" && peerPubkey != t.SelfGetPublicKey()) {
+				log.Println("Restore title:", ovalue, title)
+				// restore initilized group title
+				// 设置新title必须放在cbtitle事件循环之外设置，否则会导致死循环
+				time.AfterFunc(200*time.Millisecond, func() {
+					t.ConferenceSetTitle(groupNumber, ovalue.(string))
+				})
 			}
+		}
+	} else {
+		if title == "" || title == "None" {
+			log.Println("Group name not set:", groupNumber, title, toxaa.initGroupNamesLen())
+		} else {
+			log.Println("Saving initGroupNames:", groupNumber, title, toxaa.initGroupNamesLen())
+			toxaa.initGroupNames.Store(groupNumber, title)
 		}
 	}
 }
@@ -279,7 +348,10 @@ func fixSpecialMessage(t *tox.Tox, friendNumber uint32, msg string) {
 	} else {
 		if isGroupbot(pubkey) {
 			if msg == "Group doesn't exist." {
+				log.Println(msg, ", try create one.")
 				t.FriendSendMessage(friendNumber, "group text")
+			} else if msg == "Invalid password." {
+				log.Println("Maybe wrong group:", msg)
 			}
 		}
 	}

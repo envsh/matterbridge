@@ -5,6 +5,7 @@ import (
 	"gopp"
 	"log"
 	"math"
+	"sort"
 	"strings"
 
 	tox "github.com/kitech/go-toxcore"
@@ -23,6 +24,10 @@ func (this *Btox) processFriendCmd(friendNumber uint32, msg string) {
 
 	if msg == "info" {
 		this.processInfoCmd(friendNumber, msg)
+	} else if msg == "help" {
+		this.processHelpCmd(friendNumber, msg, pubkey)
+	} else if msg == "id" {
+		t.FriendSendMessage(friendNumber, t.SelfGetAddress())
 	}
 
 	if strings.HasPrefix(msg, "join ") {
@@ -32,12 +37,31 @@ func (this *Btox) processFriendCmd(friendNumber uint32, msg string) {
 	}
 }
 
+func (this *Btox) processHelpCmd(friendNumber uint32, msg string, pubkey string) {
+	t := this.i
+
+	hmsg := "help : Print this message\n\n"
+	hmsg += "info : Print my current status and list active group chats\n\n"
+	hmsg += "id : Print my Tox ID\n\n"
+	hmsg += "join <name> : Join selected group\n\n"
+	hmsg += "leave <name> : Leave selected group\n\n"
+	t.FriendSendMessage(friendNumber, hmsg)
+}
+
 func (this *Btox) processInfoCmd(friendNumber uint32, msg string) {
 	t := this.i
 
 	gntitles := xtox.ConferenceAllTitles(t)
+	gns := []int{}
+	for gn, _ := range gntitles {
+		gns = append(gns, int(gn))
+	}
+	sort.Ints(gns)
+
 	rmsg := ""
-	for gn, title := range gntitles {
+	for _, gn_ := range gns {
+		gn := uint32(gn_)
+		title := gntitles[gn]
 		pcnt := t.ConferencePeerCount(gn)
 		itype, _ := t.ConferenceGetType(gn)
 		ttype := gopp.IfElseStr(itype == tox.CONFERENCE_TYPE_AV, "AV", "Text")
