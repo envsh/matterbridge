@@ -308,6 +308,7 @@ func tryKeepGroupTitle(t *tox.Tox, groupNumber uint32, peerNumber uint32, title 
 	_ = err
 
 	// 防止其他用户修改标题
+	// TODO 有些群组标题不能我们来管理，不能自动保持。
 	ovalue, ok := toxaa.initGroupNames.Load(groupNumber)
 	if ok {
 		if ovalue.(string) != title {

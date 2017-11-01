@@ -25,7 +25,8 @@ type Btox struct {
 	FirstConnection bool
 	disC            chan struct{}
 
-	store *Storage
+	store     *Storage
+	frndjrman *FriendJoinedRoomsManager
 }
 
 // var flog *log.Entry
@@ -62,7 +63,14 @@ func New(cfg config.Protocol, account string, c chan config.Message) *Btox {
 	toxctx = xtox.NewToxContext("matbrg.tsbin", b.Nick, "matbrg for tox")
 	b.i = xtox.New(toxctx)
 	b.initCallbacks()
+
+	b.frndjrman = newFriendJoinedRoomsManager(b)
+	b.frndjrman.loadConfigData()
 	return b
+}
+
+func (this *Btox) initConfigData() {
+	this.frndjrman.loadConfigData()
 }
 
 func (this *Btox) Send(msg config.Message) (string, error) {
@@ -156,6 +164,7 @@ func (this *Btox) initCallbacks() {
 		log.Println(friendNumber, status, tox.ConnStatusString(status))
 		// t.ConferenceInvite(friendNumber, uint32(0))
 		tryJoinOfficalGroupbotManagedGroups(t)
+		this.tryInviteFriendToGroups(friendNumber, status)
 	}, nil)
 
 	t.CallbackFriendMessage(func(_ *tox.Tox, friendNumber uint32, msg string, userData interface{}) {
@@ -214,6 +223,20 @@ func (this *Btox) initCallbacks() {
 	}, nil)
 
 	t.CallbackConferenceNameListChange(func(_ *tox.Tox, groupNumber uint32, peerNumber uint32, change uint8, userData interface{}) {
+		peerPubkey, foundpk := xtox.ConferencePeerGetPubkey(t, groupNumber, peerNumber)
+		groupTitle, errgt := t.ConferenceGetTitle(groupNumber)
+		// gopp.ErrPrint(foundpk, peerPubkey, peerNumber, change, groupTitle)
+		gopp.ErrPrint(errgt, groupTitle, peerNumber, change, peerPubkey, foundpk)
+		switch change {
+		case tox.CHAT_CHANGE_PEER_ADD:
+			if errgt == nil && foundpk == true {
+				this.frndjrman.rtJoin(peerPubkey, groupTitle)
+			}
+		case tox.CHAT_CHANGE_PEER_DEL:
+			if errgt == nil && foundpk == true {
+				this.frndjrman.rtLeave(peerPubkey, groupTitle)
+			}
+		}
 		checkOnlyMeLeftGroup(t, int(groupNumber), int(peerNumber), change)
 	}, nil)
 
@@ -228,6 +251,12 @@ func (this *Btox) iterate() {
 	stop := false
 	tick := time.NewTicker(1 * time.Second / 5)
 	tick2 := time.NewTicker(5 * time.Second) // for tryJoin
+	tick3 := time.NewTicker(5 * time.Second) // for joined room manager
+
+	defer tick.Stop()
+	defer tick2.Stop()
+	defer tick3.Stop()
+
 	for !stop {
 		select {
 		case <-tick.C:
@@ -236,6 +265,8 @@ func (this *Btox) iterate() {
 			stop = true
 		case <-tick2.C:
 			tryJoinOfficalGroupbotManagedGroups(this.i)
+		case <-tick3.C:
+			this.checkFriendInRoomOrInvite()
 		case gn := <-toxaa.delGroupC:
 			t := this.i
 			isInvited := xtox.IsInvitedGroup(t, uint32(gn))
