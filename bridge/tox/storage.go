@@ -61,8 +61,19 @@ func (this *Storage) leave(MemberId, RoomName string) (err error) {
 
 func (this *Storage) getMembersByRoomName(RoomName string) (rets []RoomMember, err error) {
 
-	err = this.dbe.Where("room_name=? and disabled=?", RoomName, false).Find(&rets)
+	err = this.dbe.Where("room_name=? and disabled=?", RoomName, 0).Find(&rets)
 	gopp.ErrPrint(err)
+	return
+}
+
+func (this *Storage) getRoomsByMemberId(MemberId string) (rets []RoomMember, err error) {
+	err = this.dbe.Where("member_id=? and disabled=?", MemberId, 0).Find(&rets)
+	gopp.ErrPrint(err)
+	return
+}
+
+func (this *Storage) getAllRoomMembers() (rets []RoomMember, err error) {
+	err = this.dbe.Where("1=1").Find(&rets)
 	return
 }
 
