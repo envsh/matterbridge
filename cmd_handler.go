@@ -83,6 +83,7 @@ func (this *Btox) processInfoCmd(friendNumber uint32, msg string) {
 	t.FriendSendMessage(friendNumber, rmsg)
 }
 
+// TODO join/leave with number
 func (this *Btox) processJoinCmd(friendNumber uint32, msg string, pubkey string) {
 	t := this.i
 	var err error
@@ -108,6 +109,7 @@ func (this *Btox) processJoinCmd(friendNumber uint32, msg string, pubkey string)
 		err = this.store.join(pubkey, groupName)
 		gopp.ErrPrint(err)
 		this.frndjrman.rtJoin(pubkey, groupName)
+		this.frndjrman.cfgJoin(pubkey, groupName)
 	} else {
 		log.Println("not found:", groupName)
 		rmsg := fmt.Sprintf("Group not found: %s", groupName)
@@ -142,6 +144,7 @@ func (this *Btox) processLeaveCmd(friendNumber uint32, msg string, pubkey string
 		err = this.store.leave(pubkey, groupName)
 		gopp.ErrPrint(err)
 		this.frndjrman.rtLeave(pubkey, groupName)
+		this.frndjrman.cfgLeave(pubkey, groupName)
 	} else {
 		log.Println("not found:", groupName)
 		rmsg := fmt.Sprintf("Group not found: %s", groupName)
