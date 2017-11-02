@@ -60,7 +60,8 @@ func New(cfg config.Protocol, account string, c chan config.Message) *Btox {
 	store := newStorage()
 	b.store = store
 
-	toxctx = xtox.NewToxContext("matbrg.tsbin", b.Nick, "matbrg for tox")
+	statusMessage := "matbrg for toxs. Send me the message 'info', 'help' for a full list of commands"
+	toxctx = xtox.NewToxContext("matbrg.tsbin", b.Nick, statusMessage)
 	b.i = xtox.New(toxctx)
 	b.initCallbacks()
 
@@ -223,20 +224,7 @@ func (this *Btox) initCallbacks() {
 	}, nil)
 
 	t.CallbackConferenceNameListChange(func(_ *tox.Tox, groupNumber uint32, peerNumber uint32, change uint8, userData interface{}) {
-		peerPubkey, foundpk := xtox.ConferencePeerGetPubkey(t, groupNumber, peerNumber)
-		groupTitle, errgt := t.ConferenceGetTitle(groupNumber)
-		// gopp.ErrPrint(foundpk, peerPubkey, peerNumber, change, groupTitle)
-		gopp.ErrPrint(errgt, groupTitle, peerNumber, change, peerPubkey, foundpk)
-		switch change {
-		case tox.CHAT_CHANGE_PEER_ADD:
-			if errgt == nil && foundpk == true {
-				this.frndjrman.rtJoin(peerPubkey, groupTitle)
-			}
-		case tox.CHAT_CHANGE_PEER_DEL:
-			if errgt == nil && foundpk == true {
-				this.frndjrman.rtLeave(peerPubkey, groupTitle)
-			}
-		}
+		this.updatePeerState(groupNumber, peerNumber, change)
 		checkOnlyMeLeftGroup(t, int(groupNumber), int(peerNumber), change)
 	}, nil)
 
@@ -250,8 +238,8 @@ func (this *Btox) initCallbacks() {
 func (this *Btox) iterate() {
 	stop := false
 	tick := time.NewTicker(1 * time.Second / 5)
-	tick2 := time.NewTicker(5 * time.Second) // for tryJoin
-	tick3 := time.NewTicker(5 * time.Second) // for joined room manager
+	tick2 := time.NewTicker(5 * time.Second)  // for tryJoin
+	tick3 := time.NewTicker(15 * time.Second) // for joined room manager
 
 	defer tick.Stop()
 	defer tick2.Stop()

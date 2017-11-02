@@ -57,6 +57,45 @@ enable=true
     account="tox.fixlan"
     channel="Club Cyberia: No Pedos or Pervs"
 
+[[gateway]]
+name="gateway-#linuxba"
+enable=true
+
+    [[gateway.inout]]
+    account="tox.fixlan"
+    channel="#linuxba"
+
+[[gateway]]
+name="gateway-#archlinux-cn"
+enable=true
+
+    [[gateway.inout]]
+    account="tox.fixlan"
+    channel="#archlinux-cn"
+
+[[gateway]]
+name="gateway-#archlinux-cn-offtopic"
+enable=true
+
+    [[gateway.inout]]
+    account="tox.fixlan"
+    channel="#archlinux-cn-offtopic"
+
+[[gateway]]
+name="gateway-#testk"
+enable=true
+
+    [[gateway.inout]]
+    account="tox.fixlan"
+    channel="#testk"
+
+[[gateway]]
+name="gateway-#rtab123"
+enable=true
+
+    [[gateway.inout]]
+    account="tox.fixlan"
+    channel="#rtab123"
 
 [[gateway]]
 name="gateway1"
