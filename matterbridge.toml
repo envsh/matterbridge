@@ -18,12 +18,12 @@ StripNick=false
 [tox]
     [tox.fixlan]
     Server="ddd"
-    Nick="zuck06"
+    Nick="toxync"
 
 
 [[gateway]]
 name="gateway2"
-enable=true
+enable=false
     [[gateway.inout]]
     account="tox.fixlan"
     channel="test autobot"
@@ -39,7 +39,7 @@ enable=true
 
     [[gateway.inout]]
     account="tox.fixlan"
-    channel="Tox Public Chat for beautiful ladies"
+    channel="Tox Public Chat"
 
 [[gateway]]
 name="gateway-tox-cn"
@@ -51,7 +51,7 @@ enable=true
 
 [[gateway]]
 name="gateway-tox-ru"
-enable=true
+enable=false
 
     [[gateway.inout]]
     account="tox.fixlan"
@@ -83,7 +83,7 @@ enable=true
 
 [[gateway]]
 name="gateway-#testk"
-enable=true
+enable=false
 
     [[gateway.inout]]
     account="tox.fixlan"
@@ -91,7 +91,7 @@ enable=true
 
 [[gateway]]
 name="gateway-#rtab123"
-enable=true
+enable=false
 
     [[gateway.inout]]
     account="tox.fixlan"

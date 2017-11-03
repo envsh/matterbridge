@@ -6,6 +6,7 @@ import (
 	"log"
 	"math"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -25,12 +26,15 @@ func (this *Btox) processFriendCmd(friendNumber uint32, msg string) {
 	gopp.ErrPrint(err)
 	_ = friendName
 
+	msg = strings.Trim(msg, "\n\t ")
 	if msg == "info" {
 		this.processInfoCmd(friendNumber, msg)
 	} else if msg == "help" {
 		this.processHelpCmd(friendNumber, msg, pubkey)
 	} else if msg == "id" {
 		t.FriendSendMessage(friendNumber, t.SelfGetAddress())
+	} else if msg == "joined" {
+		this.processJoinedCmd(friendNumber, msg, pubkey)
 	}
 
 	if strings.HasPrefix(msg, "join ") {
@@ -48,9 +52,11 @@ func (this *Btox) processHelpCmd(friendNumber uint32, msg string, pubkey string)
 	hmsg := "help : Print this message\n\n"
 	hmsg += "info : Print my current status and list active group chats\n\n"
 	hmsg += "id : Print my Tox ID\n\n"
-	hmsg += "join <name> : Join selected group\n\n"
-	hmsg += "leave <name> : Leave selected group\n\n"
+	hmsg += "join <name|number> : Join selected group.Permanent effective\n\n"
+	hmsg += "leave <name|number> : Leave selected group.Permanent effective\n\n"
 	hmsg += "create <name> : Create a new group\n\n"
+	hmsg += "joined : You joined groups\r\n"
+	// TODO invite for fix sometimes
 	t.FriendSendMessage(friendNumber, hmsg)
 }
 
@@ -85,6 +91,15 @@ func (this *Btox) processInfoCmd(friendNumber uint32, msg string) {
 
 // TODO join/leave with number
 func (this *Btox) processJoinCmd(friendNumber uint32, msg string, pubkey string) {
+	groupSymbol := msg[5:]
+	if gopp.IsInteger(groupSymbol) {
+		this.processJoinCmdByNumber(friendNumber, msg, pubkey)
+	} else {
+		this.processJoinCmdByName(friendNumber, msg, pubkey)
+	}
+}
+
+func (this *Btox) processJoinCmdByName(friendNumber uint32, msg string, pubkey string) {
 	t := this.i
 	var err error
 
@@ -117,7 +132,35 @@ func (this *Btox) processJoinCmd(friendNumber uint32, msg string, pubkey string)
 	}
 }
 
+func (this *Btox) processJoinCmdByNumber(friendNumber uint32, msg string, pubkey string) {
+	t := this.i
+	var err error
+
+	groupSymbol := msg[5:]
+	groupNumberi, err := strconv.Atoi(groupSymbol)
+	if err != nil {
+		t.FriendSendMessage(friendNumber, "Invalid group number:"+groupSymbol)
+		return
+	}
+	groupNumber := uint32(groupNumberi)
+
+	groupName, err := t.ConferenceGetTitle(groupNumber)
+	if err != nil {
+		log.Println("Cannot get group title:", groupNumber, err)
+		return
+	}
+	this.processJoinCmdByName(friendNumber, "join "+groupName, pubkey)
+}
+
 func (this *Btox) processLeaveCmd(friendNumber uint32, msg string, pubkey string) {
+	groupSymbol := msg[6:]
+	if gopp.IsInteger(groupSymbol) {
+		this.processLeaveCmdByNumber(friendNumber, msg, pubkey)
+	} else {
+		this.processLeaveCmdByName(friendNumber, msg, pubkey)
+	}
+}
+func (this *Btox) processLeaveCmdByName(friendNumber uint32, msg string, pubkey string) {
 	t := this.i
 	var err error
 
@@ -150,4 +193,46 @@ func (this *Btox) processLeaveCmd(friendNumber uint32, msg string, pubkey string
 		rmsg := fmt.Sprintf("Group not found: %s", groupName)
 		t.FriendSendMessage(friendNumber, rmsg)
 	}
+}
+
+func (this *Btox) processLeaveCmdByNumber(friendNumber uint32, msg string, pubkey string) {
+	t := this.i
+	var err error
+
+	groupSymbol := msg[6:]
+	groupNumberi, err := strconv.Atoi(groupSymbol)
+	if err != nil {
+		t.FriendSendMessage(friendNumber, "Invalid group number:"+groupSymbol)
+		return
+	}
+	groupNumber := uint32(groupNumberi)
+
+	groupName, err := t.ConferenceGetTitle(groupNumber)
+	if err != nil {
+		log.Println("Cannot get group title:", groupNumber, err)
+		return
+	}
+	this.processLeaveCmdByName(friendNumber, "leave "+groupName, pubkey)
+}
+
+func (this *Btox) processJoinedCmd(friendNumber uint32, msg string, pubkey string) {
+	t := this.i
+	var err error
+
+	recs, err := this.store.getRoomsByMemberId(pubkey)
+	if err != nil {
+		return
+	}
+
+	if len(recs) == 0 {
+		rmsg := "You have not joined any room."
+		t.FriendSendMessage(friendNumber, rmsg)
+		return
+	}
+
+	rmsg := ""
+	for n, rec := range recs {
+		rmsg += fmt.Sprintf("%d: %s\n\n", n+1, rec.RoomName)
+	}
+	t.FriendSendMessage(friendNumber, rmsg)
 }
