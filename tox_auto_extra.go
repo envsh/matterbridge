@@ -202,13 +202,13 @@ func isGroupbot(pubkey string) bool { return strings.HasPrefix(groupbot, pubkey)
 var fixedGroups = map[string]string{
 	// "tox-en": "invite 0",
 	// "Official Tox groupchat": "invite 0",
-	"Tox Public Chat for beautiful ladies": "invite 0",
-	// "Chinese 中文":                           "invite 1",
+	"Tox Public Chat": "invite 0",
+	"Chinese 中文":      "invite 1",
 	// "tox-cn": "invite 1",
 	// "tox-ru": "invite 3",
 	// "Club Cyberia": "invite 3",
-	"Club Cyberia: No Pedos or Pervs": "invite 3",
-	"test autobot":                    "invite 4",
+	// "Club Cyberia: No Pedos or Pervs": "invite 3",
+	// "test autobot":                    "invite 4",
 	// "Russian Tox Chat (Use kalina@toxme.io or 12EDB939AA529641CE53830B518D6EB30241868EE0E5023C46A372363CAEC91C2C948AEFE4EB": "invite 5",
 }
 
@@ -308,7 +308,7 @@ func tryKeepGroupTitle(t *tox.Tox, groupNumber uint32, peerNumber uint32, title 
 	_ = err
 
 	// 防止其他用户修改标题
-	// TODO 有些群组标题不能我们来管理，不能自动保持。
+	// TODO 有些群组标题不能我们来管理，不能自动保持。+1
 	ovalue, ok := toxaa.initGroupNames.Load(groupNumber)
 	if ok {
 		if ovalue.(string) != title {
