@@ -1,0 +1,6 @@
+###  ":barjavel.freenode.net 477 zuck06 #go-nuts :Cannot join channel (+r) - you need to be identified with services"
+
+/msg nickserv register [password] [email]
+
+/msg nickserv identify [password]
+

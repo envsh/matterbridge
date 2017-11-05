@@ -10,6 +10,7 @@ import (
 
 	tox "github.com/kitech/go-toxcore"
 	"github.com/kitech/go-toxcore/xtox"
+	"github.com/kitech/godsts/sets/hashset"
 	textdistance "github.com/masatana/go-textdistance"
 	"github.com/xrash/smetrics"
 )
@@ -207,9 +208,17 @@ var fixedGroups = map[string]string{
 	// "tox-cn": "invite 1",
 	// "tox-ru": "invite 3",
 	// "Club Cyberia": "invite 3",
-	// "Club Cyberia: No Pedos or Pervs": "invite 3",
-	// "test autobot":                    "invite 4",
+	"Club Cyberia: No Pedos, No Pervs": "invite 3",
+	"test autobot":                     "invite 4",
 	// "Russian Tox Chat (Use kalina@toxme.io or 12EDB939AA529641CE53830B518D6EB30241868EE0E5023C46A372363CAEC91C2C948AEFE4EB": "invite 5",
+}
+
+var skipTitleChangeWhiteList *hashset.Set = hashset.New()
+
+func init() {
+	skipTitleChangeWhiteList.Add(
+		"415732B8A549B2A1F9A278B91C649B9E30F07330E8818246375D19E52F927C57",
+		"398C8161D038FD328A573FFAA0F5FAAF7FFDE5E8B4350E7D15E6AFD0B993FC52")
 }
 
 // 检测是否是固定群组
@@ -315,7 +324,9 @@ func tryKeepGroupTitle(t *tox.Tox, groupNumber uint32, peerNumber uint32, title 
 			// 无法取到peerPubkey时，恢复title
 			// 或者取了peerPubkey，但不是自己时恢复title
 			// 就是说，如果取到了peerPubkey并且是自己，是可以设置新title的
-			if peerPubkey == "" || (peerPubkey != "" && peerPubkey != t.SelfGetPublicKey()) {
+			if skipTitleChangeWhiteList.Contains(peerPubkey) {
+				log.Println("Peer in title keep whitelist, skip.")
+			} else if peerPubkey == "" || (peerPubkey != "" && peerPubkey != t.SelfGetPublicKey()) {
 				log.Println("Restore title:", ovalue, title)
 				// restore initilized group title
 				// 设置新title必须放在cbtitle事件循环之外设置，否则会导致死循环
