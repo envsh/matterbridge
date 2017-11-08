@@ -4,3 +4,19 @@
 
 /msg nickserv identify [password]
 
+
+### irc 掉线不能重新连接？  (解决方式，对需要认证的群组使用认证账号，不需要认证的群组使用未认证的账号)
+50671:2017/11/05 15:12:17 --> NICK toxync01
+50672:2017/11/05 15:12:17 --> USER toxync01 0.0.0.0 0.0.0.0 :toxync01
+50686:2017/11/05 15:12:26 <-- :card.freenode.net 001 toxync01 :Welcome to the freenode Internet Relay Chat Network toxync01
+50692:time="2017-11-05T15:12:26Z" level=debug msg="":card.freenode.net 001 toxync01 :Welcome to the freenode Internet Relay Chat Network toxync01"" module=irc
+50693:time="2017-11-05T15:12:27Z" level=debug msg="":toxync01 MODE toxync01 :+Zi"" module=irc
+50694:time="2017-11-05T15:12:27Z" level=debug msg="":NickServ!NickServ@services. NOTICE toxync01 :This nickname is registered. Please choose a different nickname, or identify via \x02/msg NickServ identify <password>\x02."" module=irc
+50695:time="2017-11-05T15:12:27Z" level=debug msg="":NickServ!NickServ@services. NOTICE toxync01 :There are already
+\x025\x02 sessions logged in to \x02zuck06\x02 (maximum allowed: 5)."" module=irc
+50696:time="2017-11-05T15:12:27Z" level=debug msg="":NickServ!NickServ@services. NOTICE toxync01 :Logged in nicks are: zuck00, toxync08, toxync03, toxync04, toxync06"" module=irc
+50706:time="2017-11-05T15:12:32Z" level=debug msg="":card.freenode.net 477 toxync01 #archlinux-cn :Cannot join channel (+r) - you need to be identified with services"" module=irc
+55441:time="2017-11-05T16:01:32Z" level=debug msg="":card.freenode.net 404 toxync01 #archlinux-cn :Cannot send to channel"" module=irc
+55679:time="2017-11-05T16:05:26Z" level=debug msg="":card.freenode.net 404 toxync01 #archlinux-cn :Cannot send to channel"" module=irc
+56403:time="2017-11-05T16:11:09Z" level=debug msg="":card.freenode.net 404 toxync01 #archlinux-cn :Cannot send to channel"" module=irc
+

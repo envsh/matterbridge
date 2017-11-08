@@ -10,10 +10,12 @@ StripNick=false
     Server="irc.freenode.net:6697"
     Nick="zuck06"
     Password="KR3AgBdgkoq2"
-    # Nick="matterbot3"
-    # NickServNick="zuck06"
-    # NickServUsername="zuck06"
-    # NickServPassword="KR3AgBdgkoq2"
+    UseTLS=true
+
+    [irc.freenode21]
+    Server="irc.freenode.net:6697"
+    Nick="toxync21"
+    Password="KR3AgBdgkoq2"
     UseTLS=true
 
     # [irc.freenode2]
@@ -62,8 +64,8 @@ enable=true
     channel="#rtab123"
 
     [[gateway.inout]]
-    account="irc.freenode"
-    channel="#rtab123"
+    account="irc.freenode21"
+    channel="#archlinux-cn"
 
 [[gateway]]
 name="gateway-#RetroShareCN"
