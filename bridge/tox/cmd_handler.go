@@ -36,6 +36,8 @@ func (this *Btox) processFriendCmd(friendNumber uint32, msg string) {
 	} else if msg == "joined" {
 		this.processJoinedCmd(friendNumber, msg, pubkey)
 	}
+	// TODO not joined
+	// TODO 管理员命令，隐藏的
 
 	if strings.HasPrefix(msg, "join ") {
 		this.processJoinCmd(friendNumber, msg, pubkey)
@@ -60,6 +62,7 @@ func (this *Btox) processHelpCmd(friendNumber uint32, msg string, pubkey string)
 	t.FriendSendMessage(friendNumber, hmsg)
 }
 
+// TODO 所连接的协议信息
 func (this *Btox) processInfoCmd(friendNumber uint32, msg string) {
 	t := this.i
 
@@ -67,14 +70,16 @@ func (this *Btox) processInfoCmd(friendNumber uint32, msg string) {
 	// basic info
 	rmsg += fmt.Sprintf("Uptime: %s\n\n", time.Now().Sub(startTime))
 	// rmsg += fmt.Sprintf("Friends: %d (%d online)\n\n", 0,0)
+	log.Println("get Uptime:", rmsg)
 
-	// group info
+	// groups info
 	gntitles := xtox.ConferenceAllTitles(t)
 	gns := []int{}
 	for gn, _ := range gntitles {
 		gns = append(gns, int(gn))
 	}
 	sort.Ints(gns)
+	log.Println("get groups info:", len(gns))
 
 	for _, gn_ := range gns {
 		gn := uint32(gn_)
@@ -86,7 +91,13 @@ func (this *Btox) processInfoCmd(friendNumber uint32, msg string) {
 		rmsg += fmt.Sprintf("Group %d | %s | Peers: %d | Ours: %d | Title: %s\n\n",
 			gn, ttype, pcnt, isours, title)
 	}
-	t.FriendSendMessage(friendNumber, rmsg)
+
+	msgs := gopp.Splitn(rmsg, 1000)
+	log.Println("get Group detail:", len(rmsg), len(msgs))
+	for _, msg := range msgs {
+		_, err := t.FriendSendMessage(friendNumber, msg)
+		gopp.ErrPrint(err)
+	}
 }
 
 // TODO join/leave with number
