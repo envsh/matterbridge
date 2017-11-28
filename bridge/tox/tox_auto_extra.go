@@ -209,7 +209,8 @@ var fixedGroups = map[string]string{
 	// "tox-ru": "invite 3",
 	// "Club Cyberia": "invite 3",
 	// "Club Cyberia: No Pedos, No Pervs": "invite 3",
-	"Club Cyberia: Linux General: No Pedos": "invite 4",
+	// "Club Cyberia: Linux General: No Pedos": "invite 4",
+	"Russian Tox Chat (kalina@toxme.io)": "invite 3",
 	// "test autobot":                     "invite 4",
 	// "Russian Tox Chat (Use kalina@toxme.io or 12EDB939AA529641CE53830B518D6EB30241868EE0E5023C46A372363CAEC91C2C948AEFE4EB": "invite 5",
 }

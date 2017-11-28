@@ -187,6 +187,9 @@ func (this *Btox) initCallbacks() {
 		if strings.HasPrefix(t.SelfGetAddress(), peerPubkey) {
 			return
 		}
+		if strings.HasPrefix(message, "@@") { // 不转发的消息格式
+			return
+		}
 		peerName, err := t.ConferencePeerGetName(groupNumber, peerNumber)
 		gopp.ErrPrint(err)
 		groupTitle, err := t.ConferenceGetTitle(groupNumber)
