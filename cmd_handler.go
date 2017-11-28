@@ -35,9 +35,12 @@ func (this *Btox) processFriendCmd(friendNumber uint32, msg string) {
 		t.FriendSendMessage(friendNumber, t.SelfGetAddress())
 	} else if msg == "joined" {
 		this.processJoinedCmd(friendNumber, msg, pubkey)
+	} else if msg == "njoined" {
+		this.processNotJoinedCmd(friendNumber, msg, pubkey)
 	}
 	// TODO not joined
 	// TODO 管理员命令，隐藏的
+	// TODO 解散群命令，防止出现群分裂的时候无法合并
 
 	if strings.HasPrefix(msg, "join ") {
 		this.processJoinCmd(friendNumber, msg, pubkey)
@@ -45,6 +48,8 @@ func (this *Btox) processFriendCmd(friendNumber uint32, msg string) {
 		this.processLeaveCmd(friendNumber, msg, pubkey)
 	} else if strings.HasPrefix(msg, "create ") {
 		t.FriendSendMessage(friendNumber, "Online create group coming soon. Or contact ME.")
+	} else if strings.HasPrefix(msg, "dissolve ") { //admin
+		this.processDissolveCmd(friendNumber, msg, pubkey)
 	}
 }
 
@@ -58,6 +63,7 @@ func (this *Btox) processHelpCmd(friendNumber uint32, msg string, pubkey string)
 	hmsg += "leave <name|number> : Leave selected group.Permanent effective\n\n"
 	hmsg += "create <name> : Create a new group\n\n"
 	hmsg += "joined : You joined groups\r\n"
+	hmsg += "njoined : You not joined groups\r\n"
 	// TODO invite for fix sometimes
 	t.FriendSendMessage(friendNumber, hmsg)
 }
@@ -92,7 +98,8 @@ func (this *Btox) processInfoCmd(friendNumber uint32, msg string) {
 			gn, ttype, pcnt, isours, title)
 	}
 
-	msgs := gopp.Splitn(rmsg, 1000)
+	// msgs := gopp.Splitn(rmsg, 1000)
+	msgs := gopp.Splitln(rmsg, 1000)
 	log.Println("get Group detail:", len(rmsg), len(msgs))
 	for _, msg := range msgs {
 		_, err := t.FriendSendMessage(friendNumber, msg)
@@ -226,11 +233,32 @@ func (this *Btox) processLeaveCmdByNumber(friendNumber uint32, msg string, pubke
 	this.processLeaveCmdByName(friendNumber, "leave "+groupName, pubkey)
 }
 
+func (this *Btox) processDissolveCmd(friendNumber uint32, msg string, pubkey string) {
+	t := this.i
+	var err error
+
+	groupSymbol := msg[9:]
+	groupNumberi, err := strconv.Atoi(groupSymbol)
+	gopp.ErrPrint(err)
+	if err != nil {
+		t.FriendSendMessage(friendNumber, "Invalid group number:"+groupSymbol)
+		return
+	}
+	groupNumber := uint32(groupNumberi)
+
+	_, err = t.ConferenceDelete(groupNumber)
+	if err != nil {
+		log.Println("Cannot get group title:", groupNumber, err)
+		return
+	}
+}
+
 func (this *Btox) processJoinedCmd(friendNumber uint32, msg string, pubkey string) {
 	t := this.i
 	var err error
 
 	recs, err := this.store.getRoomsByMemberId(pubkey)
+	gopp.ErrPrint(err)
 	if err != nil {
 		return
 	}
@@ -244,6 +272,43 @@ func (this *Btox) processJoinedCmd(friendNumber uint32, msg string, pubkey strin
 	rmsg := ""
 	for n, rec := range recs {
 		rmsg += fmt.Sprintf("%d: %s\n\n", n+1, rec.RoomName)
+	}
+	t.FriendSendMessage(friendNumber, rmsg)
+}
+
+func (this *Btox) processNotJoinedCmd(friendNumber uint32, msg string, pubkey string) {
+	t := this.i
+	var err error
+
+	allrecs, err := this.store.getAllRoomMembers()
+	gopp.ErrPrint(err)
+	if err != nil {
+		return
+	}
+	recs, err := this.store.getRoomsByMemberId(pubkey)
+	gopp.ErrPrint(err)
+	if err != nil {
+		return
+	}
+
+	if len(recs) == 0 {
+		rmsg := "You have not joined any room."
+		t.FriendSendMessage(friendNumber, rmsg)
+		return
+	}
+
+	rmsg := ""
+	for idx, allrec := range allrecs {
+		found := false
+		for _, rec := range recs {
+			if rec.MemberId == allrec.MemberId {
+				found = true
+				break
+			}
+		}
+		if !found {
+			rmsg += fmt.Sprintf("%d: %s\n\n", idx+1, allrec.RoomName)
+		}
 	}
 	t.FriendSendMessage(friendNumber, rmsg)
 }
