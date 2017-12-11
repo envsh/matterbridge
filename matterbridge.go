@@ -3,12 +3,13 @@ package main
 import (
 	"flag"
 	"fmt"
+	"os"
+	"strings"
+
 	"github.com/42wim/matterbridge/bridge/config"
 	"github.com/42wim/matterbridge/gateway"
 	log "github.com/Sirupsen/logrus"
 	"github.com/google/gops/agent"
-	"os"
-	"strings"
 )
 
 var (
@@ -21,6 +22,7 @@ func init() {
 }
 
 func main() {
+	printBuildInfo(true)
 	flagConfig := flag.String("conf", "matterbridge.toml", "config file")
 	flagDebug := flag.Bool("debug", false, "enable debug")
 	flagVersion := flag.Bool("version", false, "show version")
