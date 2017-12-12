@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	tox "github.com/kitech/go-toxcore"
@@ -50,6 +51,8 @@ func (this *Btox) processFriendCmd(friendNumber uint32, msg string) {
 		t.FriendSendMessage(friendNumber, "Online create group coming soon. Or contact ME.")
 	} else if strings.HasPrefix(msg, "dissolve ") { //admin
 		this.processDissolveCmd(friendNumber, msg, pubkey)
+	} else if strings.HasPrefix(msg, "ban ") {
+		this.processBanCmd(friendNumber, msg, pubkey)
 	}
 }
 
@@ -64,6 +67,9 @@ func (this *Btox) processHelpCmd(friendNumber uint32, msg string, pubkey string)
 	hmsg += "create <name> : Create a new group\n\n"
 	hmsg += "joined : You joined groups\r\n"
 	hmsg += "njoined : You not joined groups\r\n"
+	// hmsg += "ban <name> : ban a user with nick name" // TODO maybe bug is more than one user use the same nick name
+	// hmsg += "unban <name> : unban a user with nick name"
+	// hmsg += "baned : List baned users public key"
 	// TODO invite for fix sometimes
 	t.FriendSendMessage(friendNumber, hmsg)
 }
@@ -311,4 +317,65 @@ func (this *Btox) processNotJoinedCmd(friendNumber uint32, msg string, pubkey st
 		}
 	}
 	t.FriendSendMessage(friendNumber, rmsg)
+}
+
+// 禁止的用户列，内存中存在，重启重置
+// TODO 记录入库
+var banedUserList sync.Map
+
+func isBanedUser(pubkey string) bool {
+	_, ok := banedUserList.Load(pubkey)
+	return ok
+}
+
+// 从群里查找
+func FindGroupPeerByName(t *tox.Tox, name string) (pubkey string, found bool) {
+	pubkey, found = xtox.ConferenceFindPeer(t, name)
+	return
+}
+
+func (this *Btox) processBanCmd(friendNumber uint32, msg string, pubkey string) {
+	t := this.i
+
+	fname := strings.Trim(msg[4:], " ")
+	fpubkey, found := FindGroupPeerByName(t, fname)
+
+	if found {
+		banedUserList.Store(fpubkey, fname+"|"+pubkey+"|"+time.Now().String())
+	} else {
+		log.Println("ban name not exist:", msg)
+	}
+}
+
+func (this *Btox) processUnbanCmd(friendNumber uint32, msg string, pubkey string) {
+	t := this.i
+
+	fname := strings.Trim(msg[4:], " ")
+	fpubkey, found := FindGroupPeerByName(t, fname)
+
+	if found {
+		banedUserList.Delete(fpubkey)
+	} else {
+		log.Println("unban name not exist:", msg)
+	}
+
+}
+
+func (this *Btox) processBanedCmd(friendNumber uint32, msg string, pubkey string) {
+	t := this.i
+
+	cnter := 0
+	str := ""
+	banedUserList.Range(func(key interface{}, value interface{}) bool {
+		str += fmt.Sprintf("%d %v=%v\n", cnter, key, value)
+		cnter++
+		return true
+	})
+
+	if cnter > 0 {
+		chunks := gopp.Splitln(str, 1000)
+		for _, chunk := range chunks {
+			t.FriendSendMessage(friendNumber, chunk)
+		}
+	}
 }
