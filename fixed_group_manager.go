@@ -1,6 +1,7 @@
 package btox
 
 import (
+	"fmt"
 	"gopp"
 	"log"
 	"sync"
@@ -9,6 +10,8 @@ import (
 	"github.com/kitech/go-toxcore/xtox"
 	"github.com/kitech/godsts/sets/hashset"
 )
+
+// TODO only invite once if success
 
 // 根据存储的数据库群组信息，确定邀请好友到群组中
 func (this *Btox) tryInviteFriendToGroups(friendNumber uint32, status int) {
@@ -30,8 +33,19 @@ func (this *Btox) tryInviteFriendToGroups(friendNumber uint32, status int) {
 		for _, room := range rooms {
 			gn, found := xtox.ConferenceFind(t, room.RoomName)
 			if found {
+				pkatroom := fmt.Sprintf("%s@%s", pubkey, room.RoomName)
+				tabctxi, _ := toxabCtxs.Load(t)
+				tabctx := tabctxi.(*toxabContext)
+				if _, ok := tabctx.invitings.Load(pkatroom); ok {
+					log.Println("already inviting...", pkatroom)
+				}
+
 				_, err = t.ConferenceInvite(friendNumber, gn)
 				gopp.ErrPrint(err, friendNumber, fname, room.RoomName)
+				if err == nil {
+					log.Println("setted inviting once map", pkatroom)
+					tabctx.invitings.Store(pkatroom, true) // 只邀请一次, TODO 清理，在好友进群后，好友离线多时（非暂时离线）
+				}
 			} else {
 				log.Println("Can't find room:", friendNumber, fname, room.RoomName)
 			}

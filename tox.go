@@ -205,16 +205,16 @@ func (this *Btox) initCallbacks() {
 		gopp.ErrPrint(err)
 	}, nil)
 
-	t.CallbackConferenceInvite(func(_ *tox.Tox, friendNumber uint32, itype uint8, data []byte, userData interface{}) {
+	t.CallbackConferenceInvite(func(_ *tox.Tox, friendNumber uint32, itype uint8, cookie string, userData interface{}) {
 		log.Println(friendNumber, itype)
 		var gn uint32
 		var err error
 		switch int(itype) {
 		case tox.CONFERENCE_TYPE_TEXT:
-			gn, err = t.ConferenceJoin(friendNumber, data)
+			gn, err = t.ConferenceJoin(friendNumber, cookie)
 			gopp.ErrPrint(err)
 		case tox.CONFERENCE_TYPE_AV:
-			gn_, err_ := t.JoinAVGroupChat(friendNumber, data)
+			gn_, err_ := t.JoinAVGroupChat(friendNumber, cookie)
 			gn, err = uint32(gn_), err_
 		}
 		// 在刚Join的group是无法获得title的

@@ -1,8 +1,6 @@
 package btox
 
 import (
-	"crypto/md5"
-	"encoding/hex"
 	"fmt"
 	"gopp"
 	"log"
@@ -29,6 +27,7 @@ features:
 [x] auto keep groupchat title
 [ ] auto detect and show peer join/leave event
 */
+// 是否可能在不加好友的情况下拉进群中。
 
 const (
 	FOTA_NONE                   = 0 << 0
@@ -45,14 +44,15 @@ const (
 )
 
 type toxabContext struct {
-	feats int
-	inst  *tox.Tox
+	feats     int
+	inst      *tox.Tox
+	invitings sync.Map // friend pubkey @ room name => true
 }
 
 var toxabCtxs = sync.Map{} // *tox.Tox => *toxabContext
 
 func SetAutoBotFeatures(t *tox.Tox, f int) {
-	if _, loaded := toxabCtxs.LoadOrStore(t, &toxabContext{f, t}); loaded {
+	if _, loaded := toxabCtxs.LoadOrStore(t, &toxabContext{feats: f, inst: t}); loaded {
 		return // already exists
 	}
 
@@ -69,17 +69,16 @@ func SetAutoBotFeatures(t *tox.Tox, f int) {
 		}
 	}, nil)
 
-	t.CallbackConferenceInviteAdd(func(this *tox.Tox, friendNumber uint32, itype uint8, data []byte, userData interface{}) {
+	t.CallbackConferenceInviteAdd(func(this *tox.Tox, friendNumber uint32, itype uint8, cookie string, userData interface{}) {
 		if matchFeat(this, FOTA_ACCEPT_GROUP_INVITE) {
-			cookie := hex.EncodeToString(md5.New().Sum(data))
 			var err error
 			var groupNumber uint32
 			switch int(itype) {
 			case tox.CONFERENCE_TYPE_TEXT:
-				groupNumber, err = t.ConferenceJoin(friendNumber, data)
+				groupNumber, err = t.ConferenceJoin(friendNumber, cookie)
 			case tox.CONFERENCE_TYPE_AV:
 				var groupNumber_ int
-				groupNumber_, err = t.JoinAVGroupChat(friendNumber, data)
+				groupNumber_, err = t.JoinAVGroupChat(friendNumber, cookie)
 				groupNumber = uint32(groupNumber_)
 			}
 			gopp.ErrPrint(err, friendNumber, itype, cookie)
@@ -123,6 +122,7 @@ func matchFeat(this *tox.Tox, f int) bool {
 
 ////////////////////////////////
 var groupbot = "56A1ADE4B65B86BCD51CC73E2CD4E542179F47959FE3E0E21B4B0ACDADE51855D34D34D37CB5"
+var lainbot = ""
 
 // 帮助改进p2p网络稳定的bot列表
 var nethlpbots = []string{
@@ -323,6 +323,11 @@ func checkOnlyMeLeftGroupClean(t *tox.Tox, groupNumber int, peerNumber int, chan
 	return false
 }
 
+// 检测某个特定的peer已经离开
+func checkSpecificPeerGone() bool {
+	return false
+}
+
 // 无用群改名相关功能
 func makeDeletedGroupName(groupTitle string) string {
 	return fmt.Sprintf("#deleted_invited_groupchat_%s_%s",
@@ -360,8 +365,8 @@ var skipTitleChangeWhiteList *hashset.Set = hashset.New()
 
 func init() {
 	skipTitleChangeWhiteList.Add(
-		"415732B8A549B2A1F9A278B91C649B9E30F07330E8818246375D19E52F927C57",
-		"398C8161D038FD328A573FFAA0F5FAAF7FFDE5E8B4350E7D15E6AFD0B993FC52")
+		"415732B8A549B2A1F9A278B91C649B9E30F07330E8818246375D19E52F927C57", // lainbot
+		"398C8161D038FD328A573FFAA0F5FAAF7FFDE5E8B4350E7D15E6AFD0B993FC52" /* admin */)
 }
 
 // 检测是否是固定群组
