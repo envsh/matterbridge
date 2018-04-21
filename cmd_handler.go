@@ -11,8 +11,9 @@ import (
 	"sync"
 	"time"
 
-	tox "github.com/kitech/go-toxcore"
-	"github.com/kitech/go-toxcore/xtox"
+	// tox "github.com/kitech/go-toxcore"
+	tox "github.com/TokTok/go-toxcore-c"
+	"github.com/envsh/go-toxcore/xtox"
 )
 
 var startTime = time.Now()
@@ -98,7 +99,7 @@ func (this *Btox) processInfoCmd(friendNumber uint32, msg string) {
 		title := gntitles[gn]
 		pcnt := t.ConferencePeerCount(gn)
 		itype, _ := t.ConferenceGetType(gn)
-		ttype := gopp.IfElseStr(itype == tox.CONFERENCE_TYPE_AV, "Audio", "Text")
+		ttype := gopp.IfElseStr(uint8(itype) == tox.CONFERENCE_TYPE_AV, "Audio", "Text")
 		isours := gopp.IfElseInt(xtox.IsInvitedGroup(t, gn), 0, 1)
 		rmsg += fmt.Sprintf("Group %d | %s | Peers: %d | Ours: %d | Title: %s\n\n",
 			gn, ttype, pcnt, isours, title)

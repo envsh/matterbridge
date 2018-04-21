@@ -5,12 +5,14 @@ import (
 	"log"
 	"math"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/42wim/matterbridge/bridge/config"
 	// log "github.com/Sirupsen/logrus"
-	tox "github.com/kitech/go-toxcore"
-	"github.com/kitech/go-toxcore/xtox"
+	// tox "github.com/kitech/go-toxcore"
+	tox "github.com/TokTok/go-toxcore-c"
+	"github.com/envsh/go-toxcore/xtox"
 )
 
 type Btox struct {
@@ -25,8 +27,9 @@ type Btox struct {
 	FirstConnection bool
 	disC            chan struct{}
 
-	store     *Storage
-	frndjrman *FriendJoinedRoomsManager
+	store            *Storage
+	frndjrman        *FriendJoinedRoomsManager
+	groupPeerPubkeys sync.Map // groupNumber => []string
 }
 
 // var flog *log.Entry
@@ -63,8 +66,12 @@ func New(cfg config.Protocol, account string, c chan config.Message) *Btox {
 	statusMessage := "matbrg for toxs. Send me the message 'info', 'help' for a full list of commands"
 	toxctx = xtox.NewToxContext("matbrg.tsbin", b.Nick, statusMessage)
 	b.i = xtox.New(toxctx)
+	SetAutoBotFeatures(b.i, FOTA_ADD_NET_HELP_BOTS|
+		FOTA_ACCEPT_FRIEND_REQUEST|FOTA_ACCEPT_GROUP_INVITE|
+		FOTA_KEEP_GROUPCHAT_TITLE|FOTA_REMOVE_ONLY_ME_ALL)
 	b.initCallbacks()
 
+	b.groupPeerPubkeys = sync.Map{}
 	b.frndjrman = newFriendJoinedRoomsManager(b)
 	b.frndjrman.loadConfigData()
 	return b
@@ -149,9 +156,10 @@ func (this *Btox) Disconnect() error {
 //////
 func (this *Btox) initCallbacks() {
 	t := this.i
+	removeLongtimeNoSeeHelperBots(t)
 	t.CallbackSelfConnectionStatus(func(_ *tox.Tox, status int, userData interface{}) {
 		log.Println(status, tox.ConnStatusString(status))
-		autoAddNetHelperBots(t, status, userData)
+		// autoAddNetHelperBots(t, status, userData)
 	}, nil)
 
 	t.CallbackConferenceAction(func(_ *tox.Tox, groupNumber uint32, peerNumber uint32, action string, userData interface{}) {
@@ -196,44 +204,70 @@ func (this *Btox) initCallbacks() {
 		rmsg := config.Message{Username: peerName, Channel: groupTitle, Account: this.Account, UserID: peerPubkey}
 		rmsg.Protocol = protocol
 		rmsg.Text = message
-		log.Printf("Sending message from %s on %s to gateway\n", groupTitle, this.Account)
+		log.Printf("Sending message(%d) from %s on %s to gateway\n", len(message), groupTitle, this.Account)
 		this.Remote <- rmsg
 	}, nil)
 
 	t.CallbackFriendRequest(func(_ *tox.Tox, pubkey string, message string, userData interface{}) {
-		_, err := t.FriendAddNorequest(pubkey)
-		gopp.ErrPrint(err)
+		// _, err := t.FriendAddNorequest(pubkey)
+		// gopp.ErrPrint(err)
 	}, nil)
 
 	t.CallbackConferenceInvite(func(_ *tox.Tox, friendNumber uint32, itype uint8, cookie string, userData interface{}) {
 		log.Println(friendNumber, itype)
-		var gn uint32
-		var err error
-		switch int(itype) {
-		case tox.CONFERENCE_TYPE_TEXT:
-			gn, err = t.ConferenceJoin(friendNumber, cookie)
-			gopp.ErrPrint(err)
-		case tox.CONFERENCE_TYPE_AV:
-			gn_, err_ := t.JoinAVGroupChat(friendNumber, cookie)
-			gn, err = uint32(gn_), err_
-		}
-		// 在刚Join的group是无法获得title的
-		if false {
-			groupTitle, err := t.ConferenceGetTitle(gn)
-			gopp.ErrPrint(err)
-			log.Println(gn, groupTitle)
-		}
-		toxaa.onGroupInvited(int(gn))
+		/*
+			var gn uint32
+			var err error
+			switch itype {
+			case tox.CONFERENCE_TYPE_TEXT:
+				gn, err = t.ConferenceJoin(friendNumber, cookie)
+				gopp.ErrPrint(err)
+			case tox.CONFERENCE_TYPE_AV:
+				gn_, err_ := t.JoinAVGroupChat(friendNumber, cookie)
+				gn, err = uint32(gn_), err_
+			}
+			// 在刚Join的group是无法获得title的
+			if false {
+				groupTitle, err := t.ConferenceGetTitle(gn)
+				gopp.ErrPrint(err)
+				log.Println(gn, groupTitle)
+			}
+			toxaa.onGroupInvited(int(gn))
+		*/
 	}, nil)
 
-	t.CallbackConferenceNameListChange(func(_ *tox.Tox, groupNumber uint32, peerNumber uint32, change uint8, userData interface{}) {
-		this.updatePeerState(groupNumber, peerNumber, change)
-		checkOnlyMeLeftGroup(t, int(groupNumber), int(peerNumber), change)
+	t.CallbackConferencePeerNameAdd(func(_ *tox.Tox, groupNumber uint32, peerNumber uint32, name string, userData interface{}) {
+
+	}, nil)
+	t.CallbackConferencePeerListChangedAdd(func(_ *tox.Tox, groupNumber uint32, userData interface{}) {
+		pubkeysx, found := this.groupPeerPubkeys.Load(groupNumber)
+		if !found {
+			pubkeysx = []interface{}{}
+		}
+		newPubkeys := t.ConferenceGetPeerPubkeys(groupNumber)
+		added, deleted := DiffSlice(pubkeysx, newPubkeys)
+
+		for _, pubkeyx := range added {
+			this.updatePeerState2(groupNumber, pubkeyx.(string), xtox.CHAT_CHANGE_PEER_ADD)
+		}
+		for _, pubkeyx := range deleted {
+			this.updatePeerState2(groupNumber, pubkeyx.(string), xtox.CHAT_CHANGE_PEER_DEL)
+		}
+		if len(deleted) > 0 {
+			checkOnlyMeLeftGroup(t, int(groupNumber), 0, xtox.CHAT_CHANGE_PEER_DEL)
+		}
+		this.groupPeerPubkeys.Store(groupNumber, newPubkeys)
 	}, nil)
 
+	/*
+		t.CallbackConferenceNameListChange(func(_ *tox.Tox, groupNumber uint32, peerNumber uint32, change uint8, userData interface{}) {
+			this.updatePeerState(groupNumber, peerNumber, change)
+			checkOnlyMeLeftGroup(t, int(groupNumber), int(peerNumber), change)
+		}, nil)
+	*/
 	t.CallbackConferenceTitle(func(_ *tox.Tox, groupNumber uint32, peerNumber uint32, title string, userData interface{}) {
 		// 防止其他用户修改标题
-		tryKeepGroupTitle(t, groupNumber, peerNumber, title)
+		// tryKeepGroupTitle(t, groupNumber, peerNumber, title)
 	}, nil)
 }
 
