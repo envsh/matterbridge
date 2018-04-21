@@ -6,11 +6,11 @@ StripNick=false
 
 [irc]
 
-    [irc.freenode]
-    Server="irc.freenode.net:6697"
-    Nick="zuck06"
-    Password="KR3AgBdgkoq2"
-    UseTLS=true
+    #[irc.freenode60]
+    #Server="irc.freenode.net:6697"
+    #Nick="zuck60"
+    #Password="KR3AgBdgkoq2"
+    #UseTLS=true
 
     [irc.freenode21]
     Server="irc.freenode.net:6697"
@@ -35,29 +35,29 @@ StripNick=false
     Nick="zuck06"
     # Nick="toxync"
 
-[matrix]
-    [matrix.fixlan]
-    Server="https://matrix.org"
-    Login="toxync"
-    Password="8gN49mKyzFoQ"
-    NoHomeServerSuffix=true
+#[matrix]
+#    [matrix.fixlan]
+#    Server="https://matrix.org"
+#    Login="toxync"
+#    Password="8gN49mKyzFoQ"
+#    NoHomeServerSuffix=true
 
 [[gateway]]
 name="gateway-test-autobot"
-enable=false
+enable=true
     [[gateway.inout]]
     account="tox.fixlan"
     channel="test autobot"
     passive=true
 
-    #[[gateway.inout]]
-    #account="irc.freenode"
-    #channel="#testk"
+    [[gateway.inout]]
+    account="irc.freenode21"
+    channel="#testk"
 
 
 [[gateway]]
 name="gateway-#rtab123"
-enable=true
+enable=false
 
     [[gateway.inout]]
     account="tox.fixlan"
@@ -102,9 +102,9 @@ enable=false
 name="gateway1"
 enable=false
     [[gateway.inout]]
-    account="irc.freenode"
+    account="irc.freenode60"
     channel="#testk"
 
     [[gateway.inout]]
-    account="irc.freenode2"
+    account="irc.freenode21"
     channel="#rtab123"

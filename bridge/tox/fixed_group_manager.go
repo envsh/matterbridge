@@ -6,8 +6,9 @@ import (
 	"log"
 	"sync"
 
-	tox "github.com/kitech/go-toxcore"
-	"github.com/kitech/go-toxcore/xtox"
+	// tox "github.com/kitech/go-toxcore"
+	tox "github.com/TokTok/go-toxcore-c"
+	"github.com/envsh/go-toxcore/xtox"
 	"github.com/kitech/godsts/sets/hashset"
 )
 

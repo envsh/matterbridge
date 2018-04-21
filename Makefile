@@ -4,7 +4,7 @@ VERSION         :=      $(shell cat ./VERSION)
 LDFLAGS=-ldflags "-w -s -X main.Version=${VERSION} -X main.Build=${BUILD} -X main.Entry=main"
 GOVVV=`govvv -flags -version ${VERSION}|sed 's/=/=GOVVV-/g'`
 
-
 all:
-	go build -v -ldflags "${GOVVV}" .
+	# TODO hard code path
+	CGO_LDFLAGS="-L/opt/toxcore-static2/lib64 -lopus -lsodium" go build -v -ldflags "${GOVVV}" .
 
