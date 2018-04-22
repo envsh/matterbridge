@@ -66,6 +66,9 @@ func SetAutoBotFeatures(t *tox.Tox, f int) {
 	if _, loaded := toxabCtxs.LoadOrStore(t, newToxabContext(f, t)); loaded {
 		return // already exists
 	}
+	if matchFeat(t, FOTA_REMOVE_LONGTIME_NOSEE_FRIENDS) {
+		// removeLongtimeNoSeeHelperBots(t)
+	}
 
 	t.CallbackSelfConnectionStatusAdd(func(this *tox.Tox, status int, userData interface{}) {
 		if matchFeat(this, FOTA_ADD_NET_HELP_BOTS) {
@@ -115,7 +118,8 @@ func SetAutoBotFeatures(t *tox.Tox, f int) {
 			pubkeysx = []interface{}{}
 		}
 		_, deleted := DiffSlice(pubkeysx, t.ConferenceGetPeerPubkeys(groupNumber))
-		if len(deleted) > 0 {
+		if len(deleted) > 0 &&
+			(matchFeat(this, FOTA_REMOVE_ONLY_ME_ALL) || matchFeat(this, FOTA_REMOVE_ONLY_ME_INVITED)) {
 			ok := checkOnlyMeLeftGroupClean(t, int(groupNumber), 0, xtox.CHAT_CHANGE_PEER_DEL)
 			if ok && matchFeat(this, FOTA_REMOVE_ONLY_ME_ALL) {
 				// real delete it
@@ -161,7 +165,7 @@ func matchFeat(this *tox.Tox, f int) bool {
 
 ////////////////////////////////
 var groupbot = "56A1ADE4B65B86BCD51CC73E2CD4E542179F47959FE3E0E21B4B0ACDADE51855D34D34D37CB5"
-var lainbot = ""
+var lainbot = "415732B8A549B2A1F9A278B91C649B9E30F07330E8818246375D19E52F927C57F08A44E082F6"
 
 // 帮助改进p2p网络稳定的bot列表
 var nethlpbots = []string{
@@ -320,6 +324,7 @@ func checkOnlyMeLeftGroup(t *tox.Tox, groupNumber int, _ /*peerNumber*/ int, cha
 
 	// check our create group or not
 	// 即使不是自己创建的群组，在只剩下自己之后，也可以不删除。因为这个群的所有人就是自己了。
+	// 不删除有一个不好的问题，再邀请好友的时候，由于好友有一个该group的分身，接收不到邀请请求。
 	// 这里找一下为什么程序会崩溃吧
 	if _, ok := this.theirGroups[groupNumber]; ok {
 		log.Println("invited group matched, clean it", groupNumber, groupTitle)
@@ -360,6 +365,7 @@ func checkOnlyMeLeftGroupClean(t *tox.Tox, groupNumber int, _ /*peerNumber*/ int
 	// check only me left case
 	if pn := t.GroupNumberPeers(groupNumber); pn == 1 {
 		log.Println("oh, only me left:", groupNumber, groupTitle, xtox.IsInvitedGroup(t, uint32(groupNumber)))
+		// debug.PrintStack() // for get who called me
 		return true
 	}
 
