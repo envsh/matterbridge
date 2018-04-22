@@ -39,6 +39,8 @@ func (this *Btox) processFriendCmd(friendNumber uint32, msg string) {
 		this.processJoinedCmd(friendNumber, msg, pubkey)
 	} else if msg == "njoined" {
 		this.processNotJoinedCmd(friendNumber, msg, pubkey)
+	} else if msg == "uptime" {
+		this.processUptimeCmd(friendNumber, msg, pubkey)
 	}
 	// TODO not joined
 	// TODO 管理员命令，隐藏的
@@ -68,6 +70,7 @@ func (this *Btox) processHelpCmd(friendNumber uint32, msg string, pubkey string)
 	hmsg += "create <name> : Create a new group\n\n"
 	hmsg += "joined : You joined groups\r\n"
 	hmsg += "njoined : You not joined groups\r\n"
+	hmsg += "uptime : uptime info of botproc\r\n"
 	// hmsg += "ban <name> : ban a user with nick name" // TODO maybe bug is more than one user use the same nick name
 	// hmsg += "unban <name> : unban a user with nick name"
 	// hmsg += "baned : List baned users public key"
@@ -320,7 +323,38 @@ func (this *Btox) processNotJoinedCmd(friendNumber uint32, msg string, pubkey st
 	t.FriendSendMessage(friendNumber, rmsg)
 }
 
+var procStartTime = time.Now() //
+
+func (this *Btox) processUptimeCmd(friendNumber uint32, msg string, pubkey string) {
+	t := this.i
+	now := time.Now()
+
+	rmsg := ""
+	rmsg += fmt.Sprintf("Uptime: %s\n", now.Sub(procStartTime).String())
+	fns := xtox.GetAllFriendList(t)
+	onlineNum := 0
+	for _, fn := range fns {
+		st, _ := t.FriendGetConnectionStatus(fn)
+		if st > 0 {
+			onlineNum += 1
+		}
+	}
+	rmsg += fmt.Sprintf("Friends: %d (%d online)\n", len(fns), onlineNum)
+	gns := t.ConferenceGetChatlist()
+	allPeerPubkeys := make(map[string]bool, 0)
+	for _, gn := range gns {
+		peerPubkeys := t.ConferenceGetPeerPubkeys(gn)
+		for _, pubkey := range peerPubkeys {
+			allPeerPubkeys[pubkey] = true
+		}
+	}
+	rmsg += fmt.Sprintf("Groups: %d, Peers: %d\n", len(gns), len(allPeerPubkeys))
+
+	t.FriendSendMessage(friendNumber, rmsg)
+}
+
 // 禁止的用户列，内存中存在，重启重置
+// 目前禁止的用户还不影响任何流程
 // TODO 记录入库
 var banedUserList sync.Map
 

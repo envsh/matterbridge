@@ -68,7 +68,7 @@ func New(cfg config.Protocol, account string, c chan config.Message) *Btox {
 	b.i = xtox.New(toxctx)
 	SetAutoBotFeatures(b.i, FOTA_ADD_NET_HELP_BOTS|
 		FOTA_ACCEPT_FRIEND_REQUEST|FOTA_ACCEPT_GROUP_INVITE|
-		FOTA_KEEP_GROUPCHAT_TITLE|FOTA_REMOVE_ONLY_ME_ALL)
+		FOTA_KEEP_GROUPCHAT_TITLE)
 	b.initCallbacks()
 
 	b.groupPeerPubkeys = sync.Map{}
@@ -177,7 +177,7 @@ func (this *Btox) initCallbacks() {
 	}, nil)
 
 	t.CallbackFriendMessage(func(_ *tox.Tox, friendNumber uint32, msg string, userData interface{}) {
-		log.Println(friendNumber, msg)
+		// log.Println(friendNumber, msg)
 		pubkey, err := t.FriendGetPublicKey(friendNumber)
 		gopp.ErrPrint(err)
 		_ = pubkey
