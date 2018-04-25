@@ -1,6 +1,7 @@
 package btox
 
 import (
+	"fmt"
 	"gopp"
 	"log"
 	"math"
@@ -84,7 +85,7 @@ func (this *Btox) initConfigData() {
 func (this *Btox) Send(msg config.Message) (string, error) {
 	log.Printf("%+v", msg)
 	t := this.i
-	gns, found := xtox.ConferenceFindAll(t, msg.Channel)
+	gns, found := xtox.ConferenceFindAll(t, msg.Channel) // TODO improve needed
 	if found {
 		tmsg := msg.Username + msg.Text
 		for _, gn := range gns {
@@ -99,7 +100,7 @@ func (this *Btox) Send(msg config.Message) (string, error) {
 			}
 		}
 	} else {
-		log.Println("not found:", msg.Channel)
+		log.Println("channel not found:", msg.Channel)
 	}
 	return "", nil
 }
@@ -195,12 +196,14 @@ func (this *Btox) initCallbacks() {
 		if strings.HasPrefix(t.SelfGetAddress(), peerPubkey) {
 			return
 		}
-		if strings.HasPrefix(message, "@@") { // 不转发的消息格式
-			return
-		}
 		peerName, err := t.ConferencePeerGetName(groupNumber, peerNumber)
 		gopp.ErrPrint(err)
 		groupTitle, err := t.ConferenceGetTitle(groupNumber)
+		filterTopic := fmt.Sprintf("%s@%s", peerPubkey, groupTitle)
+		if err := this.IsFiltered(filterTopic, message); err != nil {
+			gopp.ErrPrint(err, peerName, groupTitle)
+			return
+		}
 		rmsg := config.Message{Username: peerName, Channel: groupTitle, Account: this.Account, UserID: peerPubkey}
 		rmsg.Protocol = protocol
 		rmsg.Text = message
