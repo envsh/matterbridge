@@ -4,6 +4,8 @@ import (
 	"errors"
 	"mkuse/hlpbot"
 	"strings"
+
+	funk "github.com/thoas/go-funk"
 )
 
 func (this *Btox) IsFiltered(topic, msg string) error {
@@ -15,9 +17,14 @@ func (this *Btox) IsFiltered(topic, msg string) error {
 		return errors.New("rate limit exceed:" + topic)
 	}
 
-	lang := helper.DetectLang(msg)
-	if lang == "ru" && strings.HasSuffix(topic, "Tox Public Chat") {
-		return errors.New("#tox can not say ru words: " + msg)
+	// TODO configure this?
+	if strings.HasSuffix(topic, "Tox Public Chat") {
+		// сука Блять: Language: srp Script: Cyrillic
+		// test До́брое у́тро!: Language: rus Script: Cyrillic
+		lang := helper.DetectLang(msg)
+		if funk.Contains([]string{"rus", "srp"}, lang) {
+			return errors.New("#tox can not say ru words: " + msg)
+		}
 	}
 	return nil
 }
