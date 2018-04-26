@@ -393,6 +393,11 @@ func getDeletedGroupName(groupTitle string) string {
 }
 
 func isGroupbot(pubkey string) bool { return strings.HasPrefix(groupbot, pubkey) }
+func isGroupbotByNum(t *tox.Tox, num uint32) bool {
+	pubkey, err := t.FriendGetPublicKey(num)
+	gopp.ErrPrint(err, num)
+	return isGroupbot(pubkey)
+}
 
 // raw group name map
 var fixedGroups = map[string]string{
@@ -402,7 +407,7 @@ var fixedGroups = map[string]string{
 	"Chinese 中文":      "invite 1",
 	// "tox-cn": "invite 1",
 	// "tox-ru": "invite 3",
-	// "Club Cyberia": "invite 3",
+	"Club Cyberia": "invite 3",
 	// "Club Cyberia: No Pedos, No Pervs": "invite 3",
 	// "Club Cyberia: Linux General: No Pedos": "invite 4",
 	"Russian Tox Chat (kalina@toxme.io)": "invite 3",
@@ -503,6 +508,24 @@ func tryJoinOfficalGroupbotManagedGroups(t *tox.Tox) {
 			log.Println("Try join:", name, handler)
 			n, err := t.FriendSendMessage(friendNumber, handler)
 			gopp.ErrPrint(err, n, friendNumber, name, handler)
+		}
+	}
+}
+
+func tryFixGroupbotGroupInviteCmd(t *tox.Tox, msg string) {
+	if strings.HasPrefix(msg, "Group ") &&
+		strings.Contains(msg, "peers: ") &&
+		strings.Contains(msg, "Title: ") {
+		fields := strings.Split(msg, "|")
+		gnum_s := strings.TrimSpace(fields[0][6:])
+		title := strings.TrimSpace(fields[3][7:])
+
+		newcmd := fmt.Sprintf("invite %s", gnum_s)
+		if oldcmd, ok := fixedGroups[title]; ok {
+			if newcmd != oldcmd {
+				log.Println("Update groupbot invite cmd:", newcmd, title)
+				fixedGroups[title] = newcmd
+			}
 		}
 	}
 }

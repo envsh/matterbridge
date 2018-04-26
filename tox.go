@@ -31,6 +31,7 @@ type Btox struct {
 	store            *Storage
 	frndjrman        *FriendJoinedRoomsManager
 	groupPeerPubkeys sync.Map // groupNumber => []string
+	brgCfgedRooms    map[string]bool
 }
 
 // var flog *log.Entry
@@ -75,6 +76,7 @@ func New(cfg config.Protocol, account string, c chan config.Message) *Btox {
 	b.groupPeerPubkeys = sync.Map{}
 	b.frndjrman = newFriendJoinedRoomsManager(b)
 	b.frndjrman.loadConfigData()
+	b.brgCfgedRooms = make(map[string]bool)
 	return b
 }
 
@@ -119,6 +121,7 @@ func (this *Btox) JoinChannel(channel config.ChannelInfo) error {
 	log.Printf("%+v\n", channel)
 	t := this.i
 
+	this.brgCfgedRooms[channel.Name] = true
 	// check passive group name
 	if rname, ok := isOfficialGroupbotManagedGroups(channel.Name); ok {
 		log.Println("It's should be invited group, don't create.", channel.Name, rname)
@@ -171,10 +174,16 @@ func (this *Btox) initCallbacks() {
 		log.Println(friendNumber, status)
 	}, nil)
 	t.CallbackFriendConnectionStatus(func(_ *tox.Tox, friendNumber uint32, status int, userData interface{}) {
-		log.Println(friendNumber, status, tox.ConnStatusString(status))
+		name, _ := t.FriendGetName(friendNumber)
+		log.Println(friendNumber, status, tox.ConnStatusString(status), name)
 		// t.ConferenceInvite(friendNumber, uint32(0))
 		tryJoinOfficalGroupbotManagedGroups(t)
 		this.tryInviteFriendToGroups(friendNumber, status)
+		if status > 0 && isGroupbotByNum(t, friendNumber) {
+			log.Println("sending cmd: info", friendNumber, status, tox.ConnStatusString(status), name)
+			t.FriendSendMessage(friendNumber, "info") // for tryFixGroupbotGroupInviteCmd
+			this.StateMachineEvent("FriendConnectionStatus", friendNumber, status)
+		}
 	}, nil)
 
 	t.CallbackFriendMessage(func(_ *tox.Tox, friendNumber uint32, msg string, userData interface{}) {
@@ -187,6 +196,10 @@ func (this *Btox) initCallbacks() {
 		_ = friendName
 
 		this.processFriendCmd(friendNumber, msg)
+		if isGroupbotByNum(t, friendNumber) {
+			tryFixGroupbotGroupInviteCmd(t, msg)
+			this.StateMachineEvent("FriendMessage", friendNumber, msg)
+		}
 	}, nil)
 
 	t.CallbackConferenceMessage(func(_ *tox.Tox, groupNumber uint32, peerNumber uint32, message string, userData interface{}) {
@@ -238,6 +251,9 @@ func (this *Btox) initCallbacks() {
 			toxaa.onGroupInvited(int(gn))
 		*/
 	}, nil)
+	t.CallbackConferenceInviteAdd(func(_ *tox.Tox, friendNumber uint32, itype uint8, cookie string, userData interface{}) {
+		log.Println(friendNumber, itype)
+	}, nil)
 
 	t.CallbackConferencePeerNameAdd(func(_ *tox.Tox, groupNumber uint32, peerNumber uint32, name string, userData interface{}) {
 
@@ -260,6 +276,9 @@ func (this *Btox) initCallbacks() {
 			checkOnlyMeLeftGroup(t, int(groupNumber), 0, xtox.CHAT_CHANGE_PEER_DEL)
 		}
 		this.groupPeerPubkeys.Store(groupNumber, newPubkeys)
+		if len(deleted) > 0 {
+			this.StateMachineEvent("ConferencePeerListChange", groupNumber)
+		}
 	}, nil)
 
 	/*
