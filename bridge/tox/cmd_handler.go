@@ -330,7 +330,7 @@ func (this *Btox) processUptimeCmd(friendNumber uint32, msg string, pubkey strin
 	now := time.Now()
 
 	rmsg := ""
-	rmsg += fmt.Sprintf("Uptime: %s\n", now.Sub(procStartTime).String())
+	rmsg += fmt.Sprintf("Uptime: %s\n", gopp.Dur2hum(now.Sub(procStartTime)))
 	fns := xtox.GetAllFriendList(t)
 	onlineNum := 0
 	for _, fn := range fns {
