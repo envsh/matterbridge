@@ -7,7 +7,7 @@ import (
 	"github.com/42wim/matterbridge/bridge/config"
 	"github.com/42wim/matterbridge/matterhook"
 	log "github.com/Sirupsen/logrus"
-	"github.com/nlopes/slack"
+	"github.com/matterbridge/slack"
 	"html"
 	"io"
 	"net/http"
@@ -187,6 +187,26 @@ func (b *Bslack) Send(msg config.Message) (string, error) {
 		b.sc.UpdateMessage(schannel.ID, ts[1], message)
 		return "", nil
 	}
+
+	if msg.Extra != nil {
+		// check if we have files to upload (from slack, telegram or mattermost)
+		if len(msg.Extra["file"]) > 0 {
+			var err error
+			for _, f := range msg.Extra["file"] {
+				fi := f.(config.FileInfo)
+				_, err = b.sc.UploadFile(slack.FileUploadParameters{
+					Reader:         bytes.NewReader(*fi.Data),
+					Filename:       fi.Name,
+					Channels:       []string{schannel.ID},
+					InitialComment: fi.Comment,
+				})
+				if err != nil {
+					flog.Errorf("uploadfile %#v", err)
+				}
+			}
+		}
+	}
+
 	_, id, err := b.sc.PostMessage(schannel.ID, message, np)
 	if err != nil {
 		return "", err
@@ -275,11 +295,16 @@ func (b *Bslack) handleSlack() {
 		if message.Raw.File != nil {
 			// limit to 1MB for now
 			if message.Raw.File.Size <= 1000000 {
+				comment := ""
 				data, err := b.downloadFile(message.Raw.File.URLPrivateDownload)
 				if err != nil {
 					flog.Errorf("download %s failed %#v", message.Raw.File.URLPrivateDownload, err)
 				} else {
-					msg.Extra["file"] = append(msg.Extra["file"], config.FileInfo{Name: message.Raw.File.Name, Data: data})
+					results := regexp.MustCompile(`.*?commented: (.*)`).FindAllStringSubmatch(msg.Text, -1)
+					if len(results) > 0 {
+						comment = results[0][1]
+					}
+					msg.Extra["file"] = append(msg.Extra["file"], config.FileInfo{Name: message.Raw.File.Name, Data: data, Comment: comment})
 				}
 			}
 		}
@@ -323,6 +348,9 @@ func (b *Bslack) handleSlackClient(mchan chan *MMMessage) {
 				}
 				m.UserID = user.ID
 				m.Username = user.Name
+				if user.Profile.DisplayName != "" {
+					m.Username = user.Profile.DisplayName
+				}
 			}
 			m.Channel = channel.Name
 			m.Text = ev.Text
@@ -337,6 +365,8 @@ func (b *Bslack) handleSlackClient(mchan chan *MMMessage) {
 			}
 			m.Raw = ev
 			m.Text = b.replaceMention(m.Text)
+			m.Text = b.replaceVariable(m.Text)
+			m.Text = b.replaceChannel(m.Text)
 			// when using webhookURL we can't check if it's our webhook or not for now
 			if ev.BotID != "" && b.Config.WebhookURL == "" {
 				bot, err := b.rtm.GetBotInfo(ev.BotID)
@@ -383,6 +413,8 @@ func (b *Bslack) handleMatterHook(mchan chan *MMMessage) {
 		m.Username = message.UserName
 		m.Text = message.Text
 		m.Text = b.replaceMention(m.Text)
+		m.Text = b.replaceVariable(m.Text)
+		m.Text = b.replaceChannel(m.Text)
 		m.Channel = message.ChannelName
 		if m.Username == "slackbot" {
 			continue
@@ -394,21 +426,43 @@ func (b *Bslack) handleMatterHook(mchan chan *MMMessage) {
 func (b *Bslack) userName(id string) string {
 	for _, u := range b.Users {
 		if u.ID == id {
+			if u.Profile.DisplayName != "" {
+				return u.Profile.DisplayName
+			}
 			return u.Name
 		}
 	}
 	return ""
 }
 
+// @see https://api.slack.com/docs/message-formatting#linking_to_channels_and_users
 func (b *Bslack) replaceMention(text string) string {
 	results := regexp.MustCompile(`<@([a-zA-z0-9]+)>`).FindAllStringSubmatch(text, -1)
 	for _, r := range results {
 		text = strings.Replace(text, "<@"+r[1]+">", "@"+b.userName(r[1]), -1)
-
 	}
 	return text
 }
 
+// @see https://api.slack.com/docs/message-formatting#linking_to_channels_and_users
+func (b *Bslack) replaceChannel(text string) string {
+	results := regexp.MustCompile(`<#[a-zA-Z0-9]+\|(.+?)>`).FindAllStringSubmatch(text, -1)
+	for _, r := range results {
+		text = strings.Replace(text, r[0], "#"+r[1], -1)
+	}
+	return text
+}
+
+// @see https://api.slack.com/docs/message-formatting#variables
+func (b *Bslack) replaceVariable(text string) string {
+	results := regexp.MustCompile(`<!([a-zA-Z0-9]+)(\|.+?)?>`).FindAllStringSubmatch(text, -1)
+	for _, r := range results {
+		text = strings.Replace(text, r[0], "@"+r[1], -1)
+	}
+	return text
+}
+
+// @see https://api.slack.com/docs/message-formatting#linking_to_urls
 func (b *Bslack) replaceURL(text string) string {
 	results := regexp.MustCompile(`<(.*?)(\|.*?)?>`).FindAllStringSubmatch(text, -1)
 	for _, r := range results {

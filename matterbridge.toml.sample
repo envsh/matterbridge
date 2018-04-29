@@ -80,6 +80,11 @@ MessageQueue=30
 #OPTIONAL (default 400)
 MessageLength=400
 
+#Split messages on MessageLength instead of showing the <message clipped>
+#WARNING: this could lead to flooding
+#OPTIONAL (default false)
+MessageSplit=false
+
 #Nicks you want to ignore. 
 #Messages from those users will not be sent to other bridges.
 #OPTIONAL
@@ -90,6 +95,23 @@ IgnoreNicks="ircspammer1 ircspammer2"
 #See https://regex-golang.appspot.com/assets/html/index.html for more regex info
 #OPTIONAL (example below ignores messages starting with ~~ or messages containing badword
 IgnoreMessages="^~~ badword"
+
+#messages you want to replace.
+#it replaces outgoing messages from the bridge.
+#so you need to place it by the sending bridge definition.
+#regular expressions supported
+#some examples:
+#this replaces cat => dog and sleep => awake
+#replacemessages=[ ["cat","dog"], ["sleep","awake"] ]
+#this replaces every number with number.  123 => numbernumbernumber
+#replacemessages=[ ["[0-9]","number"] ]
+#optional (default empty)
+ReplaceMessages=[ ["cat","dog"] ]
+
+#nicks you want to replace.
+#see replacemessages for syntaxa
+#optional (default empty)
+ReplaceNicks=[ ["user--","user"] ]
 
 #RemoteNickFormat defines how remote users appear on this bridge 
 #The string "{NICK}" (case sensitive) will be replaced by the actual nick / username.
@@ -154,6 +176,23 @@ IgnoreNicks="ircspammer1 ircspammer2"
 #OPTIONAL (example below ignores messages starting with ~~ or messages containing badword
 IgnoreMessages="^~~ badword"
 
+#Messages you want to replace.
+#It replaces outgoing messages from the bridge.
+#So you need to place it by the sending bridge definition.
+#Regular expressions supported
+#Some examples:
+#This replaces cat => dog and sleep => awake
+#ReplaceMessages=[ ["cat","dog"], ["sleep","awake"] ]
+#This Replaces every number with number.  123 => numbernumbernumber
+#ReplaceMessages=[ ["[0-9]","number"] ]
+#OPTIONAL (default empty)
+ReplaceMessages=[ ["cat","dog"] ]
+
+#Nicks you want to replace.
+#See ReplaceMessages for syntaxA
+#OPTIONAL (default empty)
+ReplaceNicks=[ ["user--","user"] ]
+
 #RemoteNickFormat defines how remote users appear on this bridge 
 #The string "{NICK}" (case sensitive) will be replaced by the actual nick / username.
 #The string "{BRIDGE}" (case sensitive) will be replaced by the sending bridge
@@ -207,6 +246,23 @@ IgnoreNicks="spammer1 spammer2"
 #See https://regex-golang.appspot.com/assets/html/index.html for more regex info
 #OPTIONAL (example below ignores messages starting with ~~ or messages containing badword
 IgnoreMessages="^~~ badword"
+
+#messages you want to replace.
+#it replaces outgoing messages from the bridge.
+#so you need to place it by the sending bridge definition.
+#regular expressions supported
+#some examples:
+#this replaces cat => dog and sleep => awake
+#replacemessages=[ ["cat","dog"], ["sleep","awake"] ]
+#this replaces every number with number.  123 => numbernumbernumber
+#replacemessages=[ ["[0-9]","number"] ]
+#optional (default empty)
+ReplaceMessages=[ ["cat","dog"] ]
+
+#nicks you want to replace.
+#see replacemessages for syntaxa
+#optional (default empty)
+ReplaceNicks=[ ["user--","user"] ]
 
 #RemoteNickFormat defines how remote users appear on this bridge 
 #The string "{NICK}" (case sensitive) will be replaced by the actual nick / username.
@@ -322,6 +378,23 @@ IgnoreNicks="ircspammer1 ircspammer2"
 #OPTIONAL (example below ignores messages starting with ~~ or messages containing badword
 IgnoreMessages="^~~ badword"
 
+#messages you want to replace.
+#it replaces outgoing messages from the bridge.
+#so you need to place it by the sending bridge definition.
+#regular expressions supported
+#some examples:
+#this replaces cat => dog and sleep => awake
+#replacemessages=[ ["cat","dog"], ["sleep","awake"] ]
+#this replaces every number with number.  123 => numbernumbernumber
+#replacemessages=[ ["[0-9]","number"] ]
+#optional (default empty)
+ReplaceMessages=[ ["cat","dog"] ]
+
+#nicks you want to replace.
+#see replacemessages for syntaxa
+#optional (default empty)
+ReplaceNicks=[ ["user--","user"] ]
+
 #RemoteNickFormat defines how remote users appear on this bridge 
 #The string "{NICK}" (case sensitive) will be replaced by the actual nick / username.
 #The string "{BRIDGE}" (case sensitive) will be replaced by the sending bridge
@@ -365,6 +438,23 @@ IgnoreNicks="ircspammer1 ircspammer2"
 #See https://regex-golang.appspot.com/assets/html/index.html for more regex info
 #OPTIONAL (example below ignores messages starting with ~~ or messages containing badword
 IgnoreMessages="^~~ badword"
+
+#messages you want to replace.
+#it replaces outgoing messages from the bridge.
+#so you need to place it by the sending bridge definition.
+#regular expressions supported
+#some examples:
+#this replaces cat => dog and sleep => awake
+#replacemessages=[ ["cat","dog"], ["sleep","awake"] ]
+#this replaces every number with number.  123 => numbernumbernumber
+#replacemessages=[ ["[0-9]","number"] ]
+#optional (default empty)
+ReplaceMessages=[ ["cat","dog"] ]
+
+#nicks you want to replace.
+#see replacemessages for syntaxa
+#optional (default empty)
+ReplaceNicks=[ ["user--","user"] ]
 
 #RemoteNickFormat defines how remote users appear on this bridge 
 #The string "{NICK}" (case sensitive) will be replaced by the actual nick / username.
@@ -457,6 +547,23 @@ IgnoreNicks="ircspammer1 ircspammer2"
 #OPTIONAL (example below ignores messages starting with ~~ or messages containing badword
 IgnoreMessages="^~~ badword"
 
+#messages you want to replace.
+#it replaces outgoing messages from the bridge.
+#so you need to place it by the sending bridge definition.
+#regular expressions supported
+#some examples:
+#this replaces cat => dog and sleep => awake
+#replacemessages=[ ["cat","dog"], ["sleep","awake"] ]
+#this replaces every number with number.  123 => numbernumbernumber
+#replacemessages=[ ["[0-9]","number"] ]
+#optional (default empty)
+ReplaceMessages=[ ["cat","dog"] ]
+
+#nicks you want to replace.
+#see replacemessages for syntaxa
+#optional (default empty)
+ReplaceNicks=[ ["user--","user"] ]
+
 #RemoteNickFormat defines how remote users appear on this bridge 
 #The string "{NICK}" (case sensitive) will be replaced by the actual nick / username.
 #The string "{BRIDGE}" (case sensitive) will be replaced by the sending bridge
@@ -525,6 +632,23 @@ IgnoreNicks="ircspammer1 ircspammer2"
 #OPTIONAL (example below ignores messages starting with ~~ or messages containing badword
 IgnoreMessages="^~~ badword"
 
+#messages you want to replace.
+#it replaces outgoing messages from the bridge.
+#so you need to place it by the sending bridge definition.
+#regular expressions supported
+#some examples:
+#this replaces cat => dog and sleep => awake
+#replacemessages=[ ["cat","dog"], ["sleep","awake"] ]
+#this replaces every number with number.  123 => numbernumbernumber
+#replacemessages=[ ["[0-9]","number"] ]
+#optional (default empty)
+ReplaceMessages=[ ["cat","dog"] ]
+
+#nicks you want to replace.
+#see replacemessages for syntaxa
+#optional (default empty)
+ReplaceNicks=[ ["user--","user"] ]
+
 #RemoteNickFormat defines how remote users appear on this bridge 
 #The string "{NICK}" (case sensitive) will be replaced by the actual nick / username.
 #The string "{BRIDGE}" (case sensitive) will be replaced by the sending bridge
@@ -591,6 +715,23 @@ IgnoreNicks="spammer1 spammer2"
 #See https://regex-golang.appspot.com/assets/html/index.html for more regex info
 #OPTIONAL (example below ignores messages starting with ~~ or messages containing badword
 IgnoreMessages="^~~ badword"
+
+#messages you want to replace.
+#it replaces outgoing messages from the bridge.
+#so you need to place it by the sending bridge definition.
+#regular expressions supported
+#some examples:
+#this replaces cat => dog and sleep => awake
+#replacemessages=[ ["cat","dog"], ["sleep","awake"] ]
+#this replaces every number with number.  123 => numbernumbernumber
+#replacemessages=[ ["[0-9]","number"] ]
+#optional (default empty)
+ReplaceMessages=[ ["cat","dog"] ]
+
+#nicks you want to replace.
+#see replacemessages for syntaxa
+#optional (default empty)
+ReplaceNicks=[ ["user--","user"] ]
 
 #RemoteNickFormat defines how remote users appear on this bridge 
 #The string "{NICK}" (case sensitive) will be replaced by the actual nick / username.
@@ -660,6 +801,23 @@ IgnoreNicks="ircspammer1 ircspammer2"
 #OPTIONAL (example below ignores messages starting with ~~ or messages containing badword
 IgnoreMessages="^~~ badword"
 
+#messages you want to replace.
+#it replaces outgoing messages from the bridge.
+#so you need to place it by the sending bridge definition.
+#regular expressions supported
+#some examples:
+#this replaces cat => dog and sleep => awake
+#replacemessages=[ ["cat","dog"], ["sleep","awake"] ]
+#this replaces every number with number.  123 => numbernumbernumber
+#replacemessages=[ ["[0-9]","number"] ]
+#optional (default empty)
+ReplaceMessages=[ ["cat","dog"] ]
+
+#nicks you want to replace.
+#see replacemessages for syntaxa
+#optional (default empty)
+ReplaceNicks=[ ["user--","user"] ]
+
 #RemoteNickFormat defines how remote users appear on this bridge 
 #The string "{NICK}" (case sensitive) will be replaced by the actual nick / username.
 #The string "{BRIDGE}" (case sensitive) will be replaced by the sending bridge
@@ -720,6 +878,23 @@ IgnoreNicks="spammer1 spammer2"
 #OPTIONAL (example below ignores messages starting with ~~ or messages containing badword
 IgnoreMessages="^~~ badword"
 
+#messages you want to replace.
+#it replaces outgoing messages from the bridge.
+#so you need to place it by the sending bridge definition.
+#regular expressions supported
+#some examples:
+#this replaces cat => dog and sleep => awake
+#replacemessages=[ ["cat","dog"], ["sleep","awake"] ]
+#this replaces every number with number.  123 => numbernumbernumber
+#replacemessages=[ ["[0-9]","number"] ]
+#optional (default empty)
+ReplaceMessages=[ ["cat","dog"] ]
+
+#nicks you want to replace.
+#see replacemessages for syntaxa
+#optional (default empty)
+ReplaceNicks=[ ["user--","user"] ]
+
 #RemoteNickFormat defines how remote users appear on this bridge 
 #The string "{NICK}" (case sensitive) will be replaced by the actual nick / username.
 #The string "{BRIDGE}" (case sensitive) will be replaced by the sending bridge
@@ -773,6 +948,23 @@ IgnoreNicks="spammer1 spammer2"
 #See https://regex-golang.appspot.com/assets/html/index.html for more regex info
 #OPTIONAL (example below ignores messages starting with ~~ or messages containing badword
 IgnoreMessages="^~~ badword"
+
+#messages you want to replace.
+#it replaces outgoing messages from the bridge.
+#so you need to place it by the sending bridge definition.
+#regular expressions supported
+#some examples:
+#this replaces cat => dog and sleep => awake
+#replacemessages=[ ["cat","dog"], ["sleep","awake"] ]
+#this replaces every number with number.  123 => numbernumbernumber
+#replacemessages=[ ["[0-9]","number"] ]
+#optional (default empty)
+ReplaceMessages=[ ["cat","dog"] ]
+
+#nicks you want to replace.
+#see replacemessages for syntaxa
+#optional (default empty)
+ReplaceNicks=[ ["user--","user"] ]
 
 #RemoteNickFormat defines how remote users appear on this bridge 
 #The string "{NICK}" (case sensitive) will be replaced by the actual nick / username.
@@ -837,6 +1029,21 @@ RemoteNickFormat="[{PROTOCOL}] <{NICK}> "
 #It will strip other characters from the nick
 #OPTIONAL (default false)
 StripNick=false
+
+
+#MediaServerUpload and MediaServerDownload are used for uploading images/files/video to
+#a remote "mediaserver" (a webserver like caddy for example).
+#When configured images/files uploaded on bridges like mattermost,slack, telegram will be downloaded
+#and uploaded again to MediaServerUpload URL
+#The MediaServerDownload will be used so that bridges without native uploading support:
+#gitter, irc and xmpp will be shown links to the files on MediaServerDownload
+#
+#More information https://github.com/42wim/matterbridge/wiki/Mediaserver-setup-%5Badvanced%5D
+#OPTIONAL (default empty)
+MediaServerUpload="https://user:pass@yourserver.com/upload"
+#OPTIONAL (default empty)
+MediaServerDownload="https://youserver.com/download"
+
 
 ###################################################################
 #Gateway configuration

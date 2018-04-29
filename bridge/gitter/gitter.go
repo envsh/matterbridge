@@ -95,7 +95,7 @@ func (b *Bgitter) JoinChannel(channel config.ChannelInfo) error {
 				flog.Errorf("connection with gitter closed for room %s", room)
 			}
 		}
-	}(stream, room.Name)
+	}(stream, room.URI)
 	return nil
 }
 
@@ -125,6 +125,23 @@ func (b *Bgitter) Send(msg config.Message) (string, error) {
 		}
 		return "", nil
 	}
+
+	if msg.Extra != nil {
+		if len(msg.Extra["file"]) > 0 {
+			for _, f := range msg.Extra["file"] {
+				fi := f.(config.FileInfo)
+				if fi.URL != "" {
+					msg.Text = fi.URL
+				}
+				_, err := b.c.SendMessage(roomID, msg.Username+msg.Text)
+				if err != nil {
+					return "", err
+				}
+			}
+			return "", nil
+		}
+	}
+
 	resp, err := b.c.SendMessage(roomID, msg.Username+msg.Text)
 	if err != nil {
 		return "", err

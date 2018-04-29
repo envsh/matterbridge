@@ -54,11 +54,11 @@ See https://github.com/42wim/matterbridge/wiki
 
 # Installing
 ## Binaries
-* Latest stable release [v1.3.1](https://github.com/42wim/matterbridge/releases/latest)
+* Latest stable release [v1.5.0](https://github.com/42wim/matterbridge/releases/latest)
 * Development releases (follows master) can be downloaded [here](https://dl.bintray.com/42wim/nightly/)  
 
 ## Building
-Go 1.7+ is required. Make sure you have [Go](https://golang.org/doc/install) properly installed, including setting up your [GOPATH] (https://golang.org/doc/code.html#GOPATH)
+Go 1.8+ is required. Make sure you have [Go](https://golang.org/doc/install) properly installed, including setting up your [GOPATH] (https://golang.org/doc/code.html#GOPATH)
 
 ```
 cd $GOPATH
@@ -175,7 +175,7 @@ Matterbridge wouldn't exist without these libraries:
 * echo - https://github.com/labstack/echo
 * gitter - https://github.com/sromku/go-gitter
 * gops - https://github.com/google/gops
-* irc - https://github.com/thoj/go-ircevent
+* irc - https://github.com/lrstanley/girc
 * mattermost - https://github.com/mattermost/platform
 * matrix - https://github.com/matrix-org/gomatrix
 * slack - https://github.com/nlopes/slack

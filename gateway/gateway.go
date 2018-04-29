@@ -1,13 +1,16 @@
 package gateway
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/42wim/matterbridge/bridge"
 	"github.com/42wim/matterbridge/bridge/config"
 	log "github.com/Sirupsen/logrus"
 	//	"github.com/davecgh/go-spew/spew"
+	"crypto/sha1"
 	"github.com/hashicorp/golang-lru"
 	"github.com/peterhellberg/emojilib"
+	"net/http"
 	"regexp"
 	"strings"
 	"time"
@@ -152,7 +155,11 @@ func (gw *Gateway) handleMessage(msg config.Message, dest *bridge.Bridge) []*BrM
 	// only slack now, check will have to be done in the different bridges.
 	// we need to check if we can't use fallback or text in other bridges
 	if msg.Extra != nil {
-		if dest.Protocol != "slack" {
+		if dest.Protocol != "discord" &&
+			dest.Protocol != "slack" &&
+			dest.Protocol != "mattermost" &&
+			dest.Protocol != "telegram" &&
+			dest.Protocol != "matrix" {
 			if msg.Text == "" {
 				return brMsgIDs
 			}
@@ -210,8 +217,8 @@ func (gw *Gateway) ignoreMessage(msg *config.Message) bool {
 		return true
 	}
 	if msg.Text == "" {
-		// we have an attachment
-		if msg.Extra != nil && msg.Extra["attachments"] != nil {
+		// we have an attachment or actual bytes
+		if msg.Extra != nil && (msg.Extra["attachments"] != nil || len(msg.Extra["file"]) > 0) {
 			return false
 		}
 		log.Debugf("ignoring empty message %#v from %s", msg, msg.Account)
@@ -251,6 +258,20 @@ func (gw *Gateway) modifyUsername(msg config.Message, dest *bridge.Bridge) strin
 	if nick == "" {
 		nick = gw.Config.General.RemoteNickFormat
 	}
+
+	// loop to replace nicks
+	for _, outer := range br.Config.ReplaceNicks {
+		search := outer[0]
+		replace := outer[1]
+		// TODO move compile to bridge init somewhere
+		re, err := regexp.Compile(search)
+		if err != nil {
+			log.Errorf("regexp in %s failed: %s", msg.Account, err)
+			break
+		}
+		msg.Username = re.ReplaceAllString(msg.Username, replace)
+	}
+
 	if len(msg.Username) > 0 {
 		// fix utf-8 issue #193
 		i := 0
@@ -284,7 +305,48 @@ func (gw *Gateway) modifyAvatar(msg config.Message, dest *bridge.Bridge) string 
 func (gw *Gateway) modifyMessage(msg *config.Message) {
 	// replace :emoji: to unicode
 	msg.Text = emojilib.Replace(msg.Text)
+	br := gw.Bridges[msg.Account]
+	// loop to replace messages
+	for _, outer := range br.Config.ReplaceMessages {
+		search := outer[0]
+		replace := outer[1]
+		// TODO move compile to bridge init somewhere
+		re, err := regexp.Compile(search)
+		if err != nil {
+			log.Errorf("regexp in %s failed: %s", msg.Account, err)
+			break
+		}
+		msg.Text = re.ReplaceAllString(msg.Text, replace)
+	}
 	msg.Gateway = gw.Name
+}
+
+func (gw *Gateway) handleFiles(msg *config.Message) {
+	if msg.Extra == nil || gw.Config.General.MediaServerUpload == "" {
+		return
+	}
+	if len(msg.Extra["file"]) > 0 {
+		client := &http.Client{
+			Timeout: time.Second * 5,
+		}
+		for i, f := range msg.Extra["file"] {
+			fi := f.(config.FileInfo)
+			sha1sum := fmt.Sprintf("%x", sha1.Sum(*fi.Data))
+			reader := bytes.NewReader(*fi.Data)
+			url := gw.Config.General.MediaServerUpload + "/" + sha1sum + "/" + fi.Name
+			durl := gw.Config.General.MediaServerDownload + "/" + sha1sum + "/" + fi.Name
+			extra := msg.Extra["file"][i].(config.FileInfo)
+			extra.URL = durl
+			msg.Extra["file"][i] = extra
+			req, _ := http.NewRequest("PUT", url, reader)
+			req.Header.Set("Content-Type", "binary/octet-stream")
+			_, err := client.Do(req)
+			if err != nil {
+				log.Errorf("mediaserver upload failed: %#v", err)
+			}
+			log.Debugf("mediaserver download URL = %s", durl)
+		}
+	}
 }
 
 func getChannelID(msg config.Message) string {

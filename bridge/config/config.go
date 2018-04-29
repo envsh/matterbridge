@@ -34,8 +34,10 @@ type Message struct {
 }
 
 type FileInfo struct {
-	Name string
-	Data *[]byte
+	Name    string
+	Data    *[]byte
+	Comment string
+	URL     string
 }
 
 type ChannelInfo struct {
@@ -59,41 +61,46 @@ type Protocol struct {
 	IgnoreMessages         string // all protocols
 	Jid                    string // xmpp
 	Login                  string // mattermost, matrix
-	Muc                    string // xmpp
-	Name                   string // all protocols
-	Nick                   string // all protocols
-	NickFormatter          string // mattermost, slack
-	NickServNick           string // IRC
-	NickServUsername       string // IRC
-	NickServPassword       string // IRC
-	NicksPerRow            int    // mattermost, slack
-	NoHomeServerSuffix     bool   // matrix
-	NoTLS                  bool   // mattermost
-	Password               string // IRC,mattermost,XMPP,matrix
-	PrefixMessagesWithNick bool   // mattemost, slack
-	Protocol               string //all protocols
-	MessageQueue           int    // IRC, size of message queue for flood control
-	MessageDelay           int    // IRC, time in millisecond to wait between messages
-	MessageLength          int    // IRC, max length of a message allowed
-	MessageFormat          string // telegram
-	RemoteNickFormat       string // all protocols
-	Server                 string // IRC,mattermost,XMPP,discord
-	ShowJoinPart           bool   // all protocols
-	ShowEmbeds             bool   // discord
-	SkipTLSVerify          bool   // IRC, mattermost
-	StripNick              bool   // all protocols
-	Team                   string // mattermost
-	Token                  string // gitter, slack, discord, api
-	URL                    string // mattermost, slack // DEPRECATED
-	UseAPI                 bool   // mattermost, slack
-	UseSASL                bool   // IRC
-	UseTLS                 bool   // IRC
-	UseFirstName           bool   // telegram
-	UseUserName            bool   // discord
-	UseInsecureURL         bool   // telegram
-	WebhookBindAddress     string // mattermost, slack
-	WebhookURL             string // mattermost, slack
-	WebhookUse             string // mattermost, slack, discord
+	MediaServerDownload    string
+	MediaServerUpload      string
+	MessageDelay           int        // IRC, time in millisecond to wait between messages
+	MessageFormat          string     // telegram
+	MessageLength          int        // IRC, max length of a message allowed
+	MessageQueue           int        // IRC, size of message queue for flood control
+	MessageSplit           bool       // IRC, split long messages with newlines on MessageLength instead of clipping
+	Muc                    string     // xmpp
+	Name                   string     // all protocols
+	Nick                   string     // all protocols
+	NickFormatter          string     // mattermost, slack
+	NickServNick           string     // IRC
+	NickServUsername       string     // IRC
+	NickServPassword       string     // IRC
+	NicksPerRow            int        // mattermost, slack
+	NoHomeServerSuffix     bool       // matrix
+	NoTLS                  bool       // mattermost
+	Password               string     // IRC,mattermost,XMPP,matrix
+	PrefixMessagesWithNick bool       // mattemost, slack
+	Protocol               string     // all protocols
+	ReplaceMessages        [][]string // all protocols
+	ReplaceNicks           [][]string // all protocols
+	RemoteNickFormat       string     // all protocols
+	Server                 string     // IRC,mattermost,XMPP,discord
+	ShowJoinPart           bool       // all protocols
+	ShowEmbeds             bool       // discord
+	SkipTLSVerify          bool       // IRC, mattermost
+	StripNick              bool       // all protocols
+	Team                   string     // mattermost
+	Token                  string     // gitter, slack, discord, api
+	URL                    string     // mattermost, slack // DEPRECATED
+	UseAPI                 bool       // mattermost, slack
+	UseSASL                bool       // IRC
+	UseTLS                 bool       // IRC
+	UseFirstName           bool       // telegram
+	UseUserName            bool       // discord
+	UseInsecureURL         bool       // telegram
+	WebhookBindAddress     string     // mattermost, slack
+	WebhookURL             string     // mattermost, slack
+	WebhookUse             string     // mattermost, slack, discord
 }
 
 type ChannelOptions struct {
