@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/42wim/matterbridge/bridge"
 	"github.com/42wim/matterbridge/bridge/config"
 	// log "github.com/Sirupsen/logrus"
 	// tox "github.com/kitech/go-toxcore"
@@ -17,16 +18,16 @@ import (
 )
 
 type Btox struct {
-	i               *tox.Tox
-	Nick            string
-	names           map[string][]string
-	Config          *config.Protocol
-	Remote          chan config.Message
-	connected       chan struct{}
-	Local           chan config.Message // local queue for flood control
-	Account         string
-	FirstConnection bool
-	disC            chan struct{}
+	i                                         *tox.Tox
+	Nick                                      string
+	names                                     map[string][]string
+	connected                                 chan struct{}
+	Local                                     chan config.Message // local queue for flood control
+	FirstConnection                           bool
+	disC                                      chan struct{}
+	MessageDelay, MessageQueue, MessageLength int
+
+	*bridge.Config
 
 	store            *Storage
 	frndjrman        *FriendJoinedRoomsManager
@@ -42,26 +43,34 @@ func init() {
 	// flog = log.WithFields(log.Fields{"module": protocol})
 }
 
-func New(cfg config.Protocol, account string, c chan config.Message) *Btox {
+func New(cfg *bridge.Config) bridge.Bridger {
 	b := &Btox{}
-	b.Config = &cfg
-	b.Nick = b.Config.Nick
-	b.Remote = c
+	b.Config = cfg
+	b.Nick = b.GetString("Nick")
 	b.names = make(map[string][]string)
-	b.Account = account
 	b.connected = make(chan struct{})
-	if b.Config.MessageDelay == 0 {
-		b.Config.MessageDelay = 1300
+	if b.GetInt("MessageDelay") == 0 {
+		b.MessageDelay = 1300
+	} else {
+		b.MessageDelay = b.GetInt("MessageDelay")
 	}
-	if b.Config.MessageQueue == 0 {
-		b.Config.MessageQueue = 30
+	if b.GetInt("MessageQueue") == 0 {
+		b.MessageQueue = 30
+	} else {
+		b.MessageQueue = b.GetInt("MessageQueue")
 	}
-	if b.Config.MessageLength == 0 {
-		b.Config.MessageLength = 400
+	if b.GetInt("MessageLength") == 0 {
+		b.MessageLength = 400
+	} else {
+		b.MessageLength = b.GetInt("MessageLength")
 	}
 	b.FirstConnection = true
-	b.disC = make(chan struct{}, 0)
 
+	b.extraSetup()
+	return b
+}
+
+func (b *Btox) extraSetup() {
 	store := newStorage()
 	b.store = store
 
@@ -77,7 +86,6 @@ func New(cfg config.Protocol, account string, c chan config.Message) *Btox {
 	b.frndjrman = newFriendJoinedRoomsManager(b)
 	b.frndjrman.loadConfigData()
 	b.brgCfgedRooms = make(map[string]bool)
-	return b
 }
 
 func (this *Btox) initConfigData() {

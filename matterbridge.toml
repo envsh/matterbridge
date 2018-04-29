@@ -1,0 +1,110 @@
+
+[general]
+# RemoteNickFormat="[{PROTOCOL}] <{NICK}> "
+RemoteNickFormat="[{NICK}@{PROTOCOL}] "
+StripNick=false
+
+[irc]
+
+    #[irc.freenode60]
+    #Server="irc.freenode.net:6697"
+    #Nick="zuck60"
+    #Password="KR3AgBdgkoq2"
+    #UseTLS=true
+
+    [irc.freenode21]
+    Server="irc.freenode.net:6697"
+    Nick="toxync21"
+    Password="KR3AgBdgkoq2"
+    UseTLS=true
+
+    # [irc.freenode2]
+    # Server="irc.freenode.net:6697"
+    # Nick="matterbot2"
+    # UseTLS=true
+
+    # [irc.cyberia]
+    # Server="irc.cyberia.is:6697"
+    # Nick="zuck06"
+    # UseTLS=true
+    # SkipTLSVerify=true
+
+[tox]
+    [tox.fixlan]
+    Server="ddd"
+    Nick="zuck06"
+    # Nick="toxync"
+
+#[matrix]
+#    [matrix.fixlan]
+#    Server="https://matrix.org"
+#    Login="toxync"
+#    Password="8gN49mKyzFoQ"
+#    NoHomeServerSuffix=true
+
+[[gateway]]
+name="gateway-test-autobot"
+enable=true
+    [[gateway.inout]]
+    account="tox.fixlan"
+    channel="test autobot"
+    passive=true
+
+    [[gateway.inout]]
+    account="irc.freenode21"
+    channel="#testk"
+
+
+[[gateway]]
+name="gateway-#rtab123"
+enable=false
+
+    [[gateway.inout]]
+    account="tox.fixlan"
+    channel="#rtab123"
+
+    [[gateway.inout]]
+    account="irc.freenode21"
+    channel="#archlinux-cn"
+
+[[gateway]]
+name="gateway-#RetroShareCN"
+enable=false
+
+    [[gateway.inout]]
+    account="matrix.fixlan"
+    channel="#RetroShareCN:matrix.org"
+    # RemoteNickFormat="[{NICK}] "
+
+    [[gateway.inout]]
+    account="tox.fixlan"
+    channel="#RetroShareCN"
+
+    [[gateway.inout]]
+    account="irc.freenode"
+    channel="#RetroShareCN"
+
+[[gateway]]
+name="gateway-#twitter-hot-lvv2com"
+enable=false
+
+    [[gateway.inout]]
+    account="matrix.fixlan"
+    channel="#_twitter_@lvv2com:matrix.org"
+    # RemoteNickFormat="[{NICK}] "
+
+    [[gateway.inout]]
+    account="tox.fixlan"
+    channel="#twitter-hot-lvv2com"
+
+
+[[gateway]]
+name="gateway1"
+enable=false
+    [[gateway.inout]]
+    account="irc.freenode60"
+    channel="#testk"
+
+    [[gateway.inout]]
+    account="irc.freenode21"
+    channel="#rtab123"

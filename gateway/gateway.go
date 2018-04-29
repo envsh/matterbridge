@@ -3,6 +3,7 @@ package gateway
 import (
 	"bytes"
 	"fmt"
+
 	"github.com/42wim/matterbridge/bridge"
 	"github.com/42wim/matterbridge/bridge/api"
 	"github.com/42wim/matterbridge/bridge/config"
@@ -16,16 +17,18 @@ import (
 	"github.com/42wim/matterbridge/bridge/sshchat"
 	"github.com/42wim/matterbridge/bridge/steam"
 	"github.com/42wim/matterbridge/bridge/telegram"
+	"github.com/42wim/matterbridge/bridge/tox"
 	"github.com/42wim/matterbridge/bridge/xmpp"
 	log "github.com/sirupsen/logrus"
 	//	"github.com/davecgh/go-spew/spew"
 	"crypto/sha1"
-	"github.com/hashicorp/golang-lru"
-	"github.com/peterhellberg/emojilib"
 	"net/http"
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/hashicorp/golang-lru"
+	"github.com/peterhellberg/emojilib"
 )
 
 type Gateway struct {
@@ -60,6 +63,7 @@ var bridgeMap = map[string]bridge.Factory{
 	"sshchat":    bsshchat.New,
 	"steam":      bsteam.New,
 	"telegram":   btelegram.New,
+	"tox":        btox.New,
 	"xmpp":       bxmpp.New,
 }
 

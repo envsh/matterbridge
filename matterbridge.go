@@ -3,13 +3,14 @@ package main
 import (
 	"flag"
 	"fmt"
+	"os"
+	"strings"
+
 	"github.com/42wim/matterbridge/bridge/config"
 	"github.com/42wim/matterbridge/gateway"
 	"github.com/google/gops/agent"
 	log "github.com/sirupsen/logrus"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
-	"os"
-	"strings"
 )
 
 var (
@@ -20,6 +21,7 @@ var (
 func main() {
 	log.SetFormatter(&prefixed.TextFormatter{PrefixPadding: 13, DisableColors: true, FullTimestamp: true})
 	flog := log.WithFields(log.Fields{"prefix": "main"})
+	printBuildInfo(true)
 	flagConfig := flag.String("conf", "matterbridge.toml", "config file")
 	flagDebug := flag.Bool("debug", false, "enable debug")
 	flagVersion := flag.Bool("version", false, "show version")

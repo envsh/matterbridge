@@ -2,12 +2,13 @@ package config
 
 import (
 	"bytes"
-	log "github.com/sirupsen/logrus"
-	"github.com/spf13/viper"
 	"os"
 	"strings"
 	"sync"
 	"time"
+
+	log "github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 )
 
 const (
@@ -147,6 +148,7 @@ type SameChannelGateway struct {
 type ConfigValues struct {
 	Api                map[string]Protocol
 	Irc                map[string]Protocol
+	Tox                map[string]Protocol
 	Mattermost         map[string]Protocol
 	Matrix             map[string]Protocol
 	Slack              map[string]Protocol
