@@ -92,16 +92,19 @@ func (this *Btox) Send(msg config.Message) (string, error) {
 	t := this.i
 	gns, found := xtox.ConferenceFindAll(t, msg.Channel) // TODO improve needed
 	if found {
-		tmsg := msg.Username + msg.Text
+		tmsgf := msg.Username + msg.Text
+		tmsgs := gopp.Splitrn(tmsgf, tox.MAX_MESSAGE_LENGTH-103)
 		for _, gn := range gns {
 			groupTitle, _ := t.ConferenceGetTitle(gn)
-			if msg.Event == config.EVENT_USER_ACTION {
-				tmsg = "/me " + tmsg
-				_, err := t.ConferenceSendMessage(gn, tox.MESSAGE_TYPE_ACTION, tmsg)
-				gopp.ErrPrint(err, gn, groupTitle)
-			} else {
-				_, err := t.ConferenceSendMessage(gn, tox.MESSAGE_TYPE_NORMAL, tmsg)
-				gopp.ErrPrint(err, gn, groupTitle)
+			for _, tmsg := range tmsgs {
+				if msg.Event == config.EVENT_USER_ACTION {
+					tmsg = "/me " + tmsg
+					_, err := t.ConferenceSendMessage(gn, tox.MESSAGE_TYPE_ACTION, tmsg)
+					gopp.ErrPrint(err, gn, groupTitle, len(tmsg))
+				} else {
+					_, err := t.ConferenceSendMessage(gn, tox.MESSAGE_TYPE_NORMAL, tmsg)
+					gopp.ErrPrint(err, gn, groupTitle, len(tmsg))
+				}
 			}
 		}
 	} else {
@@ -145,7 +148,14 @@ func (this *Btox) JoinChannel(channel config.ChannelInfo) error {
 	if found {
 		log.Println("Already exist:", gn, channel.Name)
 	} else {
-		gn_, err := t.ConferenceNew()
+		var gn_ uint32
+		var err error
+		if channel.Options.Key == "audio" {
+			gn_ = uint32(t.AddAVGroupChat())
+		} else {
+			gn_, err = t.ConferenceNew()
+		}
+
 		gopp.ErrPrint(err)
 		t.ConferenceSetTitle(gn_, channel.Name)
 		log.Println("Saving initGroupNames:", gn_, channel.Name, toxaa.initGroupNamesLen())
