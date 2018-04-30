@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/42wim/matterbridge/bridge/config"
-	// log "github.com/Sirupsen/logrus"
+	logr "github.com/Sirupsen/logrus"
 	// tox "github.com/kitech/go-toxcore"
 	tox "github.com/TokTok/go-toxcore-c"
 	"github.com/envsh/go-toxcore/xtox"
@@ -34,12 +34,15 @@ type Btox struct {
 	brgCfgedRooms    map[string]bool
 }
 
-// var flog *log.Entry
+var flog *logr.Entry
 var protocol = "tox"
 
 func init() {
+	flog = logr.WithFields(logr.Fields{"module": protocol})
+}
+
+func init() {
 	log.SetFlags(log.Flags() | log.Lshortfile)
-	// flog = log.WithFields(log.Fields{"module": protocol})
 }
 
 func New(cfg config.Protocol, account string, c chan config.Message) *Btox {
