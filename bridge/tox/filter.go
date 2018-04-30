@@ -2,6 +2,7 @@ package btox
 
 import (
 	"errors"
+	"fmt"
 	"mkuse/hlpbot"
 	"strings"
 
@@ -18,12 +19,13 @@ func (this *Btox) IsFiltered(topic, msg string) error {
 	}
 
 	// TODO configure this?
-	if strings.HasSuffix(topic, "Tox Public Chat") {
+	if strings.HasSuffix(topic, "@Tox Public Chat") ||
+		strings.HasSuffix(topic, "@test autobot") {
 		// сука Блять: Language: srp Script: Cyrillic
 		// test До́брое у́тро!: Language: rus Script: Cyrillic
 		lang := helper.DetectLang(msg)
-		if funk.Contains([]string{"rus", "srp"}, lang) {
-			return errors.New("#tox can not say ru words: " + msg)
+		if funk.Contains([]string{"rus", "srp", "mkd"}, lang) {
+			return fmt.Errorf("#tox can not say ru(%s) words: %s", lang, msg)
 		}
 	}
 	return nil
