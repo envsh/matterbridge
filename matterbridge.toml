@@ -1,8 +1,17 @@
 
+[api]
+[api.local]
+BindAddress="0.0.0.0:4242"
+Buffer=1000
+# curl -v -H "Authorization: Bearer mytoken" 127.0.0.1:4242
+Token="mytoken" 
+RemoteNickFormat="{NICK}"
+
 [general]
 # RemoteNickFormat="[{PROTOCOL}] <{NICK}> "
 RemoteNickFormat="[{NICK}@{PROTOCOL}] "
 StripNick=false
+
 
 [irc]
 
@@ -34,6 +43,7 @@ StripNick=false
     Server="ddd"
     Nick="zuck06"
     # Nick="toxync"
+    ShowJoinPart=true
 
 #[matrix]
 #    [matrix.fixlan]
@@ -49,11 +59,20 @@ enable=true
     account="tox.fixlan"
     channel="test autobot"
     passive=true
+    
+      [gateway.inout.options]
+        #OPTIONAL - your irc channel key
+        key="audio"
+
 
     [[gateway.inout]]
     account="irc.freenode21"
     channel="#testk"
 
+    [[gateway.inout]]
+    account="api.local"
+    channel="#testk"
+    
 
 [[gateway]]
 name="gateway-#rtab123"

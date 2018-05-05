@@ -87,12 +87,47 @@ func (this *Btox) initConfigData() {
 	this.frndjrman.loadConfigData()
 }
 
+func (b *Btox) Command(msg *config.Message) string {
+	switch msg.Text {
+	case "!users":
+		t := b.i
+		var names []string
+		gns, found := xtox.ConferenceFindAll(t, msg.Channel) // TODO improve needed
+		if found {
+			for _, gn := range gns {
+				names = t.ConferenceGetNames(gn)
+				break
+			}
+		}
+		go func() {
+			b.Remote <- config.Message{Username: b.Nick,
+				Text: fmt.Sprintf("There are %d users, %s currently on Tox %s",
+					len(names), strings.Join(names, ", "), msg.Channel),
+				Channel: msg.Channel, Account: b.Account}
+		}()
+	case "!ping":
+		go func() {
+			b.Remote <- config.Message{Username: b.Nick, Text: fmt.Sprintf("pong! on %s", msg.Channel),
+				Channel: msg.Channel, Account: b.Account}
+		}()
+	}
+	return ""
+}
+
 func (this *Btox) Send(msg config.Message) (string, error) {
 	log.Printf("%+v", msg)
+	if strings.HasPrefix(msg.Text, "!") {
+		this.Command(&msg)
+		return "", nil
+	}
+
 	t := this.i
 	gns, found := xtox.ConferenceFindAll(t, msg.Channel) // TODO improve needed
 	if found {
 		tmsgf := msg.Username + msg.Text
+		if strings.HasSuffix(msg.Text, "currently on IRC") {
+			tmsgf = msg.Username + fmt.Sprintf("There are %d users, %s", strings.Count(msg.Text, ",")+1, msg.Text)
+		}
 		tmsgs := gopp.Splitrn(tmsgf, tox.MAX_MESSAGE_LENGTH-103)
 		for _, gn := range gns {
 			groupTitle, _ := t.ConferenceGetTitle(gn)
@@ -217,6 +252,9 @@ func (this *Btox) initCallbacks() {
 
 	t.CallbackConferenceMessage(func(_ *tox.Tox, groupNumber uint32, peerNumber uint32, message string, userData interface{}) {
 		log.Println(groupNumber, peerNumber, message)
+		if this.processChannelCmd(groupNumber, peerNumber, message) {
+			return
+		}
 		peerPubkey, err := t.ConferencePeerGetPublicKey(groupNumber, peerNumber)
 		gopp.ErrPrint(err)
 		if strings.HasPrefix(t.SelfGetAddress(), peerPubkey) {

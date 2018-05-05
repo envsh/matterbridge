@@ -171,8 +171,11 @@ var lainbot = "415732B8A549B2A1F9A278B91C649B9E30F07330E8818246375D19E52F927C57F
 var nethlpbots = []string{
 	groupbot, //groupbot@toxme.io
 	"76518406F6A9F2217E8DC487CC783C25CC16A15EB36FF32E335A235342C48A39218F515C39A6", //echobot@toxme.io
-	"7F3948BDF42F2DA68468ADA46783B392EF8ADD60E8BDE3CD04981766B5A7883747824B7108D7", //toxme@toxme.io
+	// "7F3948BDF42F2DA68468ADA46783B392EF8ADD60E8BDE3CD04981766B5A7883747824B7108D7", //toxme@toxme.io
+	"1FC48C9D9ABD459A824AE9A8F587AB01ACF5E6234E9C46B3781C2A00699058278FD226BEF124", //toxme@toxme.io
 	"DD7A68B345E0AA918F3544AA916B5CA6AED6DE80389BFF1EF7342DACD597943D62BDEED1FC67", // my echobot
+	"03F47F0AE26BE32C73579CBA2C5421A159EDFF74535A7E8C6480398D93A0EA2E02B1B20B80D7", // DobroBot
+	"A922A51E1C91205B9F7992E2273107D47C72E8AE909C61C28A77A4A2A115431B14592AB38A3B", // toxirc
 	//, // kalinaBot@toxme.io,
 	//, // LainBot@toxme.io,
 }
@@ -400,7 +403,8 @@ func isGroupbotByNum(t *tox.Tox, num uint32) bool {
 }
 
 // raw group name map
-var fixedGroups = map[string]string{
+var fixedGroups = map[string]string{}
+var fixedGroupsReal = map[string]string{
 	// "tox-en": "invite 0",
 	// "Official Tox groupchat": "invite 0",
 	"Tox Public Chat": "invite 0",
@@ -413,6 +417,11 @@ var fixedGroups = map[string]string{
 	"Russian Tox Chat (kalina@toxme.io)": "invite 3",
 	// "test autobot":                     "invite 4",
 	// "Russian Tox Chat (Use kalina@toxme.io or 12EDB939AA529641CE53830B518D6EB30241868EE0E5023C46A372363CAEC91C2C948AEFE4EB": "invite 5",
+}
+
+func init() {
+	// for test comment this line
+	fixedGroups = fixedGroupsReal
 }
 
 var skipTitleChangeWhiteList *hashset.Set = hashset.New()

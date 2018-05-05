@@ -4,13 +4,6 @@ import (
 	"bytes"
 	"crypto/tls"
 	"fmt"
-	"github.com/42wim/go-ircevent"
-	"github.com/42wim/matterbridge/bridge/config"
-	log "github.com/Sirupsen/logrus"
-	"github.com/paulrosania/go-charset/charset"
-	_ "github.com/paulrosania/go-charset/data"
-	"github.com/saintfish/chardet"
-	ircm "github.com/sorcix/irc"
 	"io"
 	"io/ioutil"
 	"regexp"
@@ -18,6 +11,14 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/42wim/go-ircevent"
+	"github.com/42wim/matterbridge/bridge/config"
+	log "github.com/Sirupsen/logrus"
+	"github.com/paulrosania/go-charset/charset"
+	_ "github.com/paulrosania/go-charset/data"
+	"github.com/saintfish/chardet"
+	ircm "github.com/sorcix/irc"
 )
 
 type Birc struct {
@@ -66,6 +67,11 @@ func (b *Birc) Command(msg *config.Message) string {
 		b.i.AddCallback(ircm.RPL_NAMREPLY, b.storeNames)
 		b.i.AddCallback(ircm.RPL_ENDOFNAMES, b.endNames)
 		b.i.SendRaw("NAMES " + msg.Channel)
+	case "!ping":
+		go func() {
+			b.Remote <- config.Message{Username: b.Nick, Text: fmt.Sprintf("pong! on %s", msg.Channel),
+				Channel: msg.Channel, Account: b.Account}
+		}()
 	}
 	return ""
 }
@@ -137,6 +143,7 @@ func (b *Birc) Send(msg config.Message) (string, error) {
 	flog.Debugf("Receiving %#v", msg)
 	if strings.HasPrefix(msg.Text, "!") {
 		b.Command(&msg)
+		return "", nil
 	}
 
 	if b.Config.Charset != "" {
