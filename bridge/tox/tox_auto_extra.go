@@ -166,6 +166,7 @@ func matchFeat(this *tox.Tox, f int) bool {
 ////////////////////////////////
 var groupbot = "56A1ADE4B65B86BCD51CC73E2CD4E542179F47959FE3E0E21B4B0ACDADE51855D34D34D37CB5"
 var lainbot = "415732B8A549B2A1F9A278B91C649B9E30F07330E8818246375D19E52F927C57F08A44E082F6"
+var kalinabot = "12EDB939AA529641CE53830B518D6EB30241868EE0E5023C46A372363CAEC91C2C948AEFE4EB"
 
 // 帮助改进p2p网络稳定的bot列表
 var nethlpbots = []string{
@@ -176,8 +177,8 @@ var nethlpbots = []string{
 	"DD7A68B345E0AA918F3544AA916B5CA6AED6DE80389BFF1EF7342DACD597943D62BDEED1FC67", // my echobot
 	"03F47F0AE26BE32C73579CBA2C5421A159EDFF74535A7E8C6480398D93A0EA2E02B1B20B80D7", // DobroBot
 	"A922A51E1C91205B9F7992E2273107D47C72E8AE909C61C28A77A4A2A115431B14592AB38A3B", // toxirc
-	//, // kalinaBot@toxme.io,
-	//, // LainBot@toxme.io,
+	kalinabot, // kalinaBot@toxme.io,
+	lainbot,   // LainBot@toxme.io,
 }
 
 // TODO sync锁
@@ -414,7 +415,7 @@ var fixedGroupsReal = map[string]string{
 	"Club Cyberia": "invite 3",
 	// "Club Cyberia: No Pedos, No Pervs": "invite 3",
 	// "Club Cyberia: Linux General: No Pedos": "invite 4",
-	"Russian Tox Chat (kalina@toxme.io)": "invite 3",
+	// "Russian Tox Chat (kalina@toxme.io)": "invite 3",
 	// "test autobot":                     "invite 4",
 	// "Russian Tox Chat (Use kalina@toxme.io or 12EDB939AA529641CE53830B518D6EB30241868EE0E5023C46A372363CAEC91C2C948AEFE4EB": "invite 5",
 }
@@ -428,7 +429,8 @@ var skipTitleChangeWhiteList *hashset.Set = hashset.New()
 
 func init() {
 	skipTitleChangeWhiteList.Add(
-		"415732B8A549B2A1F9A278B91C649B9E30F07330E8818246375D19E52F927C57", // lainbot
+		lainbot[:64],   // lainbot
+		kalinabot[:64], // kalinabot
 		"398C8161D038FD328A573FFAA0F5FAAF7FFDE5E8B4350E7D15E6AFD0B993FC52" /* admin */)
 }
 
