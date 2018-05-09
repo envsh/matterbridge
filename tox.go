@@ -68,7 +68,7 @@ func New(cfg config.Protocol, account string, c chan config.Message) *Btox {
 	store := newStorage()
 	b.store = store
 
-	statusMessage := "matbrg for toxs. Send me the message 'info', 'help' for a full list of commands"
+	statusMessage := "matbrg for toxers. Send me the message 'info', 'help' for a full list of commands. code: https://github.com/envsh/matterbridge ."
 	toxctx = xtox.NewToxContext("matbrg.tsbin", b.Nick, statusMessage)
 	b.i = xtox.New(toxctx)
 	SetAutoBotFeatures(b.i, FOTA_ADD_NET_HELP_BOTS|
@@ -124,7 +124,7 @@ func (this *Btox) Send(msg config.Message) (string, error) {
 	t := this.i
 	gns, found := xtox.ConferenceFindAll(t, msg.Channel) // TODO improve needed
 	if found {
-		tmsgf := msg.Username + msg.Text
+		tmsgf := restoreUserName(msg.Username) + msg.Text
 		if strings.HasSuffix(msg.Text, "currently on IRC") {
 			tmsgf = msg.Username + fmt.Sprintf("There are %d users, %s", strings.Count(msg.Text, ",")+1, msg.Text)
 		}
