@@ -11,6 +11,7 @@ import (
 
 	"github.com/42wim/matterbridge/bridge"
 	"github.com/42wim/matterbridge/bridge/config"
+	"github.com/42wim/matterbridge/bridge/helper"
 	logr "github.com/Sirupsen/logrus"
 	// tox "github.com/kitech/go-toxcore"
 	tox "github.com/TokTok/go-toxcore-c"
@@ -132,18 +133,56 @@ func (this *Btox) Send(msg config.Message) (string, error) {
 		return "", nil
 	}
 
-	t := this.i
-	gns, found := xtox.ConferenceFindAll(t, msg.Channel) // TODO improve needed
-	if found {
-		tmsgf := restoreUserName(msg.Username) + msg.Text
-		if strings.HasSuffix(msg.Text, "currently on IRC") {
-			tmsgf = msg.Username + fmt.Sprintf("There are %d users, %s", strings.Count(msg.Text, ",")+1, msg.Text)
+	msg.Text = restoreUserName(msg.Username) + msg.Text
+	if strings.HasSuffix(msg.Text, "currently on IRC") {
+		msg.Text = msg.Username + fmt.Sprintf("There are %d users, %s", strings.Count(msg.Text, ",")+1, msg.Text)
+	}
+
+	if msg.Extra != nil {
+		return this._SendFiles(&msg)
+	}
+	this._SendImpl(msg.Channel, msg.Text, msg.Event)
+	return "", nil
+}
+
+func (this *Btox) _SendFiles(msg *config.Message) (string, error) {
+	b := this
+	// Handle files
+	if msg.Extra != nil {
+		for _, rmsg := range helper.HandleExtra(msg, b.General) {
+			// b.Local <- rmsg
+			this._SendImpl(rmsg.Channel, rmsg.Text, rmsg.Event)
 		}
-		tmsgs := gopp.Splitrn(tmsgf, tox.MAX_MESSAGE_LENGTH-103)
+		if len(msg.Extra["file"]) > 0 {
+			for _, f := range msg.Extra["file"] {
+				fi := f.(config.FileInfo)
+				if fi.Comment != "" {
+					msg.Text += fi.Comment + ": "
+				}
+				if fi.URL != "" {
+					msg.Text = fi.URL
+					if fi.Comment != "" {
+						msg.Text = fi.Comment + ": " + fi.URL
+					}
+				}
+				// b.Local <- config.Message{Text: msg.Text, Username: msg.Username, Channel: msg.Channel, Event: msg.Event}
+				this._SendImpl(msg.Channel, msg.Text, msg.Event)
+			}
+			return "", nil
+		}
+	}
+	return "", nil
+}
+
+func (this *Btox) _SendImpl(channel, msgText string, msgEvent string) {
+	t := this.i
+	gns, found := xtox.ConferenceFindAll(t, channel) // TODO improve needed
+	if found {
+		tmsgs := gopp.Splitrn(msgText, tox.MAX_MESSAGE_LENGTH-103)
 		for _, gn := range gns {
 			groupTitle, _ := t.ConferenceGetTitle(gn)
 			for _, tmsg := range tmsgs {
-				if msg.Event == config.EVENT_USER_ACTION {
+				if msgEvent == config.EVENT_USER_ACTION {
 					tmsg = "/me " + tmsg
 					_, err := t.ConferenceSendMessage(gn, tox.MESSAGE_TYPE_ACTION, tmsg)
 					gopp.ErrPrint(err, gn, groupTitle, len(tmsg))
@@ -154,9 +193,8 @@ func (this *Btox) Send(msg config.Message) (string, error) {
 			}
 		}
 	} else {
-		log.Println("channel not found:", msg.Channel)
+		log.Println("channel not found:", channel)
 	}
-	return "", nil
 }
 
 var toxctx *xtox.ToxContext
