@@ -9,6 +9,7 @@ import (
 	"github.com/42wim/matterbridge/bridge/discord"
 	"github.com/42wim/matterbridge/bridge/gitter"
 	"github.com/42wim/matterbridge/bridge/irc"
+	"github.com/42wim/matterbridge/bridge/tox"
 	"github.com/42wim/matterbridge/bridge/matrix"
 	"github.com/42wim/matterbridge/bridge/mattermost"
 	"github.com/42wim/matterbridge/bridge/rocketchat"
@@ -55,6 +56,7 @@ var bridgeMap = map[string]bridge.Factory{
 	"discord":    bdiscord.New,
 	"gitter":     bgitter.New,
 	"irc":        birc.New,
+	"tox":        btox.New,
 	"mattermost": bmattermost.New,
 	"matrix":     bmatrix.New,
 	"rocketchat": brocketchat.New,

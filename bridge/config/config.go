@@ -150,6 +150,7 @@ type SameChannelGateway struct {
 type ConfigValues struct {
 	Api                map[string]Protocol
 	Irc                map[string]Protocol
+	Tox                map[string]Protocol
 	Mattermost         map[string]Protocol
 	Matrix             map[string]Protocol
 	Slack              map[string]Protocol
