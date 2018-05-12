@@ -45,12 +45,12 @@ StripNick=false
     # Nick="toxync"
     ShowJoinPart=true
 
-#[matrix]
-#    [matrix.fixlan]
-#    Server="https://matrix.org"
-#    Login="toxync"
-#    Password="8gN49mKyzFoQ"
-#    NoHomeServerSuffix=true
+[matrix]
+    [matrix.fixlan]
+    Server="https://matrix.org"
+    Login="toxync"
+    Password="8gN49mKyzFoQ"
+    NoHomeServerSuffix=true
 
 [[gateway]]
 name="gateway-test-autobot"
@@ -68,6 +68,10 @@ enable=true
     [[gateway.inout]]
     account="irc.freenode21"
     channel="#testk"
+
+    [[gateway.inout]]
+    account="matrix.fixlan"
+    channel="#testk:matrix.org"
 
     [[gateway.inout]]
     account="api.local"

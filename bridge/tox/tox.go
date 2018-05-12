@@ -65,6 +65,11 @@ func New(cfg config.Protocol, account string, c chan config.Message) *Btox {
 	b.FirstConnection = true
 	b.disC = make(chan struct{}, 0)
 
+	b.extraSetup()
+	return b
+}
+
+func (b *Btox) extraSetup() {
 	store := newStorage()
 	b.store = store
 
@@ -80,7 +85,7 @@ func New(cfg config.Protocol, account string, c chan config.Message) *Btox {
 	b.frndjrman = newFriendJoinedRoomsManager(b)
 	b.frndjrman.loadConfigData()
 	b.brgCfgedRooms = make(map[string]bool)
-	return b
+
 }
 
 func (this *Btox) initConfigData() {
