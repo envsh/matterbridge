@@ -1,0 +1,46 @@
+###  ":barjavel.freenode.net 477 zuck06 #go-nuts :Cannot join channel (+r) - you need to be identified with services"
+
+/msg nickserv register [password] [email]
+
+/msg nickserv identify [password]
+
+
+### irc 掉线不能重新连接？  (解决方式，对需要认证的群组使用认证账号，不需要认证的群组使用未认证的账号)
+50671:2017/11/05 15:12:17 --> NICK toxync01
+50672:2017/11/05 15:12:17 --> USER toxync01 0.0.0.0 0.0.0.0 :toxync01
+50686:2017/11/05 15:12:26 <-- :card.freenode.net 001 toxync01 :Welcome to the freenode Internet Relay Chat Network toxync01
+50692:time="2017-11-05T15:12:26Z" level=debug msg="":card.freenode.net 001 toxync01 :Welcome to the freenode Internet Relay Chat Network toxync01"" module=irc
+50693:time="2017-11-05T15:12:27Z" level=debug msg="":toxync01 MODE toxync01 :+Zi"" module=irc
+50694:time="2017-11-05T15:12:27Z" level=debug msg="":NickServ!NickServ@services. NOTICE toxync01 :This nickname is registered. Please choose a different nickname, or identify via \x02/msg NickServ identify <password>\x02."" module=irc
+50695:time="2017-11-05T15:12:27Z" level=debug msg="":NickServ!NickServ@services. NOTICE toxync01 :There are already
+\x025\x02 sessions logged in to \x02zuck06\x02 (maximum allowed: 5)."" module=irc
+50696:time="2017-11-05T15:12:27Z" level=debug msg="":NickServ!NickServ@services. NOTICE toxync01 :Logged in nicks are: zuck00, toxync08, toxync03, toxync04, toxync06"" module=irc
+50706:time="2017-11-05T15:12:32Z" level=debug msg="":card.freenode.net 477 toxync01 #archlinux-cn :Cannot join channel (+r) - you need to be identified with services"" module=irc
+55441:time="2017-11-05T16:01:32Z" level=debug msg="":card.freenode.net 404 toxync01 #archlinux-cn :Cannot send to channel"" module=irc
+55679:time="2017-11-05T16:05:26Z" level=debug msg="":card.freenode.net 404 toxync01 #archlinux-cn :Cannot send to channel"" module=irc
+56403:time="2017-11-05T16:11:09Z" level=debug msg="":card.freenode.net 404 toxync01 #archlinux-cn :Cannot send to channel"" module=irc
+
+################
+
+2017/12/12 12:56:16 node_pool.go:111: Pinged all=54, errcnt=0, 213.435µs
+time="2017-12-12T12:56:16Z" level=debug msg="Sending JOIN_LEAVE event from irc.freenode19 to gateway" module=irc 
+time="2017-12-12T12:56:16Z" level=debug msg="":ralalala!~Marcel@2a02:908:2210:cfa0:f1a6:dcc9:92be:314e QUIT :Ping timeout: 255 seconds"" module=irc 
+panic: runtime error: slice bounds out of range
+
+goroutine 75 [running]:
+github.com/kitech/go-toxcore.(*Tox).ConferencePeerGetName(0xc4203ed680, 0x50000001b, 0xc42071e59c, 0xde6640, 0xc42050f020, 0x1)
+        /home/gzleo/oss/src/github.com/kitech/go-toxcore/group.go:206 +0x1f0
+github.com/kitech/go-toxcore/xtox.(*_XTox).initCallbacks.func4(0xc4203ed680, 0x50000001b, 0xc421841d02, 0x0, 0x0)
+        /home/gzleo/oss/src/github.com/kitech/go-toxcore/xtox/xtox.go:177 +0x196
+github.com/kitech/go-toxcore.callbackConferenceNameListChangeWrapperForC.func1()
+        /home/gzleo/oss/src/github.com/kitech/go-toxcore/group.go:142 +0x5c
+github.com/kitech/go-toxcore.(*Tox).invokeCallbackEvents(0xc4203ed680, 0xc42050f010, 0x2, 0x2)
+        /home/gzleo/oss/src/github.com/kitech/go-toxcore/tox.go:563 +0x37
+github.com/kitech/go-toxcore.(*Tox).Iterate2(0xc4203ed680, 0x0, 0x0)
+        /home/gzleo/oss/src/github.com/kitech/go-toxcore/tox.go:558 +0x130
+github.com/42wim/matterbridge/bridge/tox.(*Btox).iterate(0xc4202ba9a0)
+        /home/gzleo/oss/src/github.com/42wim/matterbridge/bridge/tox/tox.go:254 +0x369
+created by github.com/42wim/matterbridge/bridge/tox.(*Btox).Connect
+        /home/gzleo/oss/src/github.com/42wim/matterbridge/bridge/tox/tox.go:106 +0x120
+
+
