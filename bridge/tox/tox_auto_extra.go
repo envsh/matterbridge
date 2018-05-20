@@ -97,7 +97,7 @@ func SetAutoBotFeatures(t *tox.Tox, f int) {
 			}
 			gopp.ErrPrint(err, friendNumber, itype, cookie)
 			if err != nil {
-				toxaa.onGroupInvited(int(groupNumber))
+				toxaa.onGroupInvited(groupNumber)
 			}
 		}
 	}, nil)
@@ -120,7 +120,7 @@ func SetAutoBotFeatures(t *tox.Tox, f int) {
 		_, deleted := DiffSlice(pubkeysx, t.ConferenceGetPeerPubkeys(groupNumber))
 		if len(deleted) > 0 &&
 			(matchFeat(this, FOTA_REMOVE_ONLY_ME_ALL) || matchFeat(this, FOTA_REMOVE_ONLY_ME_INVITED)) {
-			ok := checkOnlyMeLeftGroupClean(t, int(groupNumber), 0, xtox.CHAT_CHANGE_PEER_DEL)
+			ok := checkOnlyMeLeftGroupClean(t, groupNumber, 0, xtox.CHAT_CHANGE_PEER_DEL)
 			if ok && matchFeat(this, FOTA_REMOVE_ONLY_ME_ALL) {
 				// real delete it
 				_, err := t.ConferenceDelete(groupNumber)
@@ -128,7 +128,7 @@ func SetAutoBotFeatures(t *tox.Tox, f int) {
 			} else if ok && matchFeat(this, FOTA_REMOVE_ONLY_ME_INVITED) {
 				if xtox.IsInvitedGroup(this, groupNumber) {
 					// real delete it
-					removedInvitedGroupClean(this, int(groupNumber))
+					removedInvitedGroupClean(this, groupNumber)
 				}
 			}
 		}
@@ -184,18 +184,18 @@ var nethlpbots = []string{
 // TODO sync锁
 // tox 实例的一些自动化行为整理
 type toxAutoAction struct {
-	delGroupC chan int // 用于删除被邀群的channel，被主tox循环使用
+	delGroupC chan uint32 // 用于删除被邀群的channel，被主tox循环使用
 
-	theirGroups map[int]bool // accepted group number => true
+	theirGroups map[uint32]bool // accepted group number => true
 
 	initGroupNames sync.Map // uint32=>string group number => group title
 }
 
 func newToxAutoAction() *toxAutoAction {
 	this := &toxAutoAction{}
-	this.delGroupC = make(chan int, 16)
+	this.delGroupC = make(chan uint32, 16)
 
-	this.theirGroups = make(map[int]bool)
+	this.theirGroups = make(map[uint32]bool)
 
 	return this
 }
@@ -219,8 +219,16 @@ func (this *toxAutoAction) iterateTasks() {
 
 // TODO accept多次会出现什么情况
 // called in onGroupInvite, when accepted
-func (this *toxAutoAction) onGroupInvited(groupNumber int) {
+func (this *toxAutoAction) onGroupInvited(groupNumber uint32) {
 	this.theirGroups[groupNumber] = true
+}
+
+// clear group info
+func (this *toxAutoAction) removeGroup(groupNumber uint32) {
+	this.initGroupNames.Delete(groupNumber)
+	if _, ok := this.theirGroups[groupNumber]; ok {
+		delete(this.theirGroups, groupNumber)
+	}
 }
 
 // for self connection status callback
@@ -265,7 +273,7 @@ func removeLongtimeNoSeeHelperBots(t *tox.Tox) {
 实现自动摘除被别人邀请，但当前只有自己在了的群组。
 */
 func autoRemoveInvitedGroups(t *tox.Tox,
-	groupNumber int, peerNumber int, change uint8, ud interface{}) {
+	groupNumber uint32, peerNumber int, change uint8, ud interface{}) {
 	// this := toxaa
 
 	// check only me left case
@@ -275,8 +283,8 @@ func autoRemoveInvitedGroups(t *tox.Tox,
 // 被邀请的群组被删除的处理
 // 清缓存映射
 // 尝试重新加入，因为有可能是我方掉线了。
-func removedInvitedGroup(t *tox.Tox, groupNumber int) error {
-	groupTitle, err := t.ConferenceGetTitle(uint32(groupNumber))
+func removedInvitedGroup(t *tox.Tox, groupNumber uint32) error {
+	groupTitle, err := t.ConferenceGetTitle(groupNumber)
 	gopp.ErrPrint(err)
 	if xtox.IsInvitedGroup(t, uint32(groupNumber)) {
 		log.Println("Delete invited group: ", groupNumber, groupTitle)
@@ -294,10 +302,10 @@ func removedInvitedGroup(t *tox.Tox, groupNumber int) error {
 	return nil
 }
 
-func removedInvitedGroupClean(t *tox.Tox, groupNumber int) error {
+func removedInvitedGroupClean(t *tox.Tox, groupNumber uint32) error {
 	groupTitle, err := t.ConferenceGetTitle(uint32(groupNumber))
 	gopp.ErrPrint(err)
-	if xtox.IsInvitedGroup(t, uint32(groupNumber)) {
+	if xtox.IsInvitedGroup(t, groupNumber) {
 		log.Println("Delete invited group: ", groupNumber, groupTitle)
 		delete(toxaa.theirGroups, groupNumber)
 		toxaa.initGroupNames.Delete(uint32(groupNumber))
@@ -312,14 +320,14 @@ func removedInvitedGroupClean(t *tox.Tox, groupNumber int) error {
 
 // 检查群组中是否只有自己了，来自 callback name list change
 // 但是只需要关注 PEER_DEL事件
-func checkOnlyMeLeftGroup(t *tox.Tox, groupNumber int, _ /*peerNumber*/ int, change uint8) {
+func checkOnlyMeLeftGroup(t *tox.Tox, groupNumber uint32, _ /*peerNumber*/ int, change uint8) {
 	this := toxaa
 
 	if !checkOnlyMeLeftGroupClean(t, groupNumber, 0, change) {
 		return
 	}
 
-	groupTitle, err := t.GroupGetTitle(groupNumber)
+	groupTitle, err := t.GroupGetTitle(int(groupNumber))
 	if err != nil {
 		log.Println("wtf", err, groupNumber, change)
 	}
@@ -349,25 +357,25 @@ func checkOnlyMeLeftGroup(t *tox.Tox, groupNumber int, _ /*peerNumber*/ int, cha
 			// why not delete here? deadlock? crash?
 		})
 		log.Println("Rename....", groupTitle, makeDeletedGroupName(groupTitle))
-		t.GroupSetTitle(groupNumber, makeDeletedGroupName(groupTitle))
+		t.GroupSetTitle(int(groupNumber), makeDeletedGroupName(groupTitle))
 		log.Println("dont delete invited groupchat for a try", groupNumber, ok, err)
 	}
 }
 
 // 干净版本的check，只做check，不做删除
-func checkOnlyMeLeftGroupClean(t *tox.Tox, groupNumber int, _ /*peerNumber*/ int, change uint8) bool {
+func checkOnlyMeLeftGroupClean(t *tox.Tox, groupNumber uint32, _ /*peerNumber*/ int, change uint8) bool {
 	if change != xtox.CHAT_CHANGE_PEER_DEL {
 		return false
 	}
 
-	groupTitle, err := t.GroupGetTitle(groupNumber)
+	groupTitle, err := t.GroupGetTitle(int(groupNumber))
 	if err != nil {
 		log.Println("wtf", err, groupNumber, change)
 	}
 	// var peerPubkey string
 
 	// check only me left case
-	if pn := t.GroupNumberPeers(groupNumber); pn == 1 {
+	if pn := t.GroupNumberPeers(int(groupNumber)); pn == 1 {
 		log.Println("oh, only me left:", groupNumber, groupTitle, xtox.IsInvitedGroup(t, uint32(groupNumber)))
 		// debug.PrintStack() // for get who called me
 		return true

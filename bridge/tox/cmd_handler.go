@@ -261,6 +261,9 @@ func (this *Btox) processDissolveCmd(friendNumber uint32, msg string, pubkey str
 		log.Println("Cannot get group title:", groupNumber, err)
 		return
 	}
+
+	// TODO delete meta info in other struct
+	toxaa.removeGroup(groupNumber)
 }
 
 func (this *Btox) processJoinedCmd(friendNumber uint32, msg string, pubkey string) {

@@ -17,7 +17,7 @@ type Storage struct {
 func newStorage() *Storage {
 	this := &Storage{}
 
-	dsn := "toxbrg.sqlite3"
+	dsn := "toxbrg.sqlite3?cache=shared&mode=rwc"
 	dbe, err := xorm.NewEngine("sqlite3", dsn)
 	gopp.ErrPrint(err)
 	dbe.ShowSQL(true)
@@ -26,7 +26,15 @@ func newStorage() *Storage {
 	gopp.ErrPrint(err)
 
 	this.dbe = dbe
+	this.SetWAL(true)
 	return this
+}
+
+func (this *Storage) SetWAL(enable bool) {
+	_, err := this.dbe.Exec("PRAGMA journal_mode=WAL;")
+	gopp.ErrPrint(err)
+	_, err = this.dbe.Exec("PRAGMA locking_mode=EXCLUSIVE;")
+	gopp.ErrPrint(err)
 }
 
 func (this *Storage) join(MemberId, RoomName string) (err error) {

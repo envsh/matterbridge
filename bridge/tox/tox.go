@@ -133,14 +133,15 @@ func (this *Btox) Send(msg config.Message) (string, error) {
 		return "", nil
 	}
 
+	if msg.Extra != nil {
+		return this._SendFiles(&msg)
+	}
+
 	msg.Text = restoreUserName(msg.Username) + msg.Text
 	if strings.HasSuffix(msg.Text, "currently on IRC") {
 		msg.Text = msg.Username + fmt.Sprintf("There are %d users, %s", strings.Count(msg.Text, ",")+1, msg.Text)
 	}
 
-	if msg.Extra != nil {
-		return this._SendFiles(&msg)
-	}
 	this._SendImpl(msg.Channel, msg.Text, msg.Event)
 	return "", nil
 }
@@ -151,6 +152,7 @@ func (this *Btox) _SendFiles(msg *config.Message) (string, error) {
 	if msg.Extra != nil {
 		for _, rmsg := range helper.HandleExtra(msg, b.General) {
 			// b.Local <- rmsg
+			rmsg.Text = restoreUserName(rmsg.Username) + rmsg.Text
 			this._SendImpl(rmsg.Channel, rmsg.Text, rmsg.Event)
 		}
 		if len(msg.Extra["file"]) > 0 {
@@ -166,8 +168,10 @@ func (this *Btox) _SendFiles(msg *config.Message) (string, error) {
 					}
 				}
 				// b.Local <- config.Message{Text: msg.Text, Username: msg.Username, Channel: msg.Channel, Event: msg.Event}
+				msg.Text = restoreUserName(msg.Username) + msg.Text
 				this._SendImpl(msg.Channel, msg.Text, msg.Event)
 			}
+
 			return "", nil
 		}
 	}
@@ -200,8 +204,11 @@ func (this *Btox) _SendImpl(channel, msgText string, msgEvent string) {
 var toxctx *xtox.ToxContext
 
 func (this *Btox) Connect() error {
+	b := this
+	b.Log.Infof("Connecting %s", b.GetString("Server"))
 	log.Println(this.Nick, "===", this.Account, this.Config)
 	xtox.Connect(this.i)
+	xtox.ConnectFixed(this.i)
 
 	go this.iterate()
 	return nil
@@ -373,7 +380,7 @@ func (this *Btox) initCallbacks() {
 			this.updatePeerState2(groupNumber, pubkeyx.(string), xtox.CHAT_CHANGE_PEER_DEL)
 		}
 		if len(deleted) > 0 {
-			checkOnlyMeLeftGroup(t, int(groupNumber), 0, xtox.CHAT_CHANGE_PEER_DEL)
+			checkOnlyMeLeftGroup(t, groupNumber, 0, xtox.CHAT_CHANGE_PEER_DEL)
 		}
 		this.groupPeerPubkeys.Store(groupNumber, newPubkeys)
 		if len(deleted) > 0 {
