@@ -41,6 +41,8 @@ func (this *Btox) processFriendCmd(friendNumber uint32, msg string) {
 		this.processNotJoinedCmd(friendNumber, msg, pubkey)
 	} else if msg == "uptime" {
 		this.processUptimeCmd(friendNumber, msg, pubkey)
+	} else if msg == "listonline" {
+		this.processListOnlineCmd(friendNumber, msg, pubkey)
 	}
 	// TODO not joined
 	// TODO 管理员命令，隐藏的
@@ -143,6 +145,11 @@ func (this *Btox) processJoinCmdByName(friendNumber uint32, msg string, pubkey s
 			}
 			gn = gn_
 		}
+		if gn == 0 {
+			log.Println("The #0 group is Trash, don't join.", groupName)
+			t.FriendSendMessage(friendNumber, "The #0 group is Trash, don't join."+groupName)
+			return
+		}
 		if true {
 			_, err = t.ConferenceInvite(friendNumber, gn)
 			gopp.ErrPrint(err)
@@ -168,6 +175,11 @@ func (this *Btox) processJoinCmdByNumber(friendNumber uint32, msg string, pubkey
 	groupNumberi, err := strconv.Atoi(groupSymbol)
 	if err != nil {
 		t.FriendSendMessage(friendNumber, "Invalid group number:"+groupSymbol)
+		return
+	}
+	if groupNumberi == 0 {
+		log.Println("The #0 group is Trash, don't join.", groupNumberi)
+		t.FriendSendMessage(friendNumber, "The #0 group is Trash, don't join.")
 		return
 	}
 	groupNumber := uint32(groupNumberi)
@@ -256,14 +268,11 @@ func (this *Btox) processDissolveCmd(friendNumber uint32, msg string, pubkey str
 	}
 	groupNumber := uint32(groupNumberi)
 
-	_, err = t.ConferenceDelete(groupNumber)
+	err = toxaa.removeGroup(t, groupNumber)
 	if err != nil {
 		log.Println("Cannot get group title:", groupNumber, err)
 		return
 	}
-
-	// TODO delete meta info in other struct
-	toxaa.removeGroup(groupNumber)
 }
 
 func (this *Btox) processJoinedCmd(friendNumber uint32, msg string, pubkey string) {
@@ -354,6 +363,26 @@ func (this *Btox) processUptimeCmd(friendNumber uint32, msg string, pubkey strin
 	rmsg += fmt.Sprintf("Groups: %d, Peers: %d\n", len(gns), len(allPeerPubkeys))
 
 	t.FriendSendMessage(friendNumber, rmsg)
+}
+
+func (this *Btox) processListOnlineCmd(friendNumber uint32, msg string, pubkey string) {
+	t := this.i
+
+	lstxt := ""
+	fns := xtox.GetAllFriendList(t)
+	for _, fn := range fns {
+		n, _ := t.FriendGetConnectionStatus(fn)
+		if n > tox.CONNECTION_NONE {
+			pubkey, _ := t.FriendGetPublicKey(fn)
+			name, _ := t.FriendGetName(fn)
+			lstxt += fmt.Sprintf("%d | %s | %s\n", fn, pubkey[0:8], name)
+		}
+	}
+
+	rmsgs := gopp.Splitln(lstxt, 1000)
+	for _, rmsg := range rmsgs {
+		t.FriendSendMessage(friendNumber, rmsg)
+	}
 }
 
 // 禁止的用户列，内存中存在，重启重置

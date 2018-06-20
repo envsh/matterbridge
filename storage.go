@@ -1,6 +1,7 @@
 package btox
 
 import (
+	"fmt"
 	"gopp"
 	"time"
 
@@ -33,6 +34,9 @@ func newStorage() *Storage {
 func (this *Storage) SetWAL(enable bool) {
 	_, err := this.dbe.Exec("PRAGMA journal_mode=WAL;")
 	gopp.ErrPrint(err)
+	_, err = this.dbe.Exec(fmt.Sprintf("PRAGMA journal_size_limit=%d;", 3*1000*1000)) // 3MB
+	gopp.ErrPrint(err)
+	// others: wal_checkpoint, wal_autocheckpoint, synchronous, cache_size
 	_, err = this.dbe.Exec("PRAGMA locking_mode=EXCLUSIVE;")
 	gopp.ErrPrint(err)
 }
