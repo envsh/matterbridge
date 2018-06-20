@@ -7,5 +7,5 @@ GOVVV=`govvv -flags -version ${VERSION}|sed 's/=/=GOVVV-/g'`
 export PKG_CONFIG_PATH=/opt/toxcore-static2/lib64/pkgconfig
 all:
 	# TODO hard code path, -race
-	CGO_LDFLAGS="-L/opt/toxcore-static2/lib64 -lopus -lsodium" go build -v -ldflags "${GOVVV}" .
+	CGO_LDFLAGS="-L/opt/toxcore-static2/lib64 -lopus -lsodium" go build -i -v -ldflags "${GOVVV}" .
 

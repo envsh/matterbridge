@@ -4,6 +4,17 @@ import (
 	"bytes"
 	"crypto/tls"
 	"fmt"
+	"io"
+	"io/ioutil"
+	"net"
+	"os"
+	"regexp"
+	"sort"
+	"strconv"
+	"strings"
+	"time"
+	"unicode/utf8"
+
 	"github.com/42wim/matterbridge/bridge"
 	"github.com/42wim/matterbridge/bridge/config"
 	"github.com/42wim/matterbridge/bridge/helper"
@@ -11,15 +22,6 @@ import (
 	"github.com/paulrosania/go-charset/charset"
 	_ "github.com/paulrosania/go-charset/data"
 	"github.com/saintfish/chardet"
-	"io"
-	"io/ioutil"
-	"net"
-	"regexp"
-	"sort"
-	"strconv"
-	"strings"
-	"time"
-	"unicode/utf8"
 )
 
 type Birc struct {
@@ -105,6 +107,8 @@ func (b *Birc) Connect() error {
 	if b.GetBool("UseSASL") {
 		i.Config.SASL = &girc.SASLPlain{b.GetString("NickServNick"), b.GetString("NickServPassword")}
 	}
+	i.Config.Debug = os.Stderr
+	i.Config.Out = os.Stderr
 
 	i.Handlers.Add(girc.RPL_WELCOME, b.handleNewConnection)
 	i.Handlers.Add(girc.RPL_ENDOFMOTD, b.handleOtherAuth)
@@ -287,7 +291,14 @@ func (b *Birc) handleNewConnection(client *girc.Client, event girc.Event) {
 
 func (b *Birc) handleJoinPart(client *girc.Client, event girc.Event) {
 	if len(event.Params) == 0 {
-		b.Log.Debugf("handleJoinPart: empty Params? %#v", event)
+		b.Log.Debugf("handleJoinPart: empty Params? %#v,%#v", client.Config, event)
+		if event.Command == "QUIT" &&
+			(strings.Contains(event.Trailing, "Disconnected by services")) {
+			b.Log.Infof("%s reconnecting ..", b.Account)
+			if !b.i.IsConnected() {
+				// b.Remote <- config.Message{Username: "system", Text: "reconnect", Channel: "unknownzzz", Account: b.Account, Event: config.EVENT_FAILURE}
+			}
+		}
 		return
 	}
 	channel := strings.ToLower(event.Params[0])

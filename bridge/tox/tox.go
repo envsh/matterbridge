@@ -83,9 +83,14 @@ func (b *Btox) extraSetup() {
 	statusMessage := "matbrg for toxers. Send me the message 'info', 'help' for a full list of commands. code: https://github.com/envsh/matterbridge ."
 	toxctx = xtox.NewToxContext("matbrg.tsbin", b.Nick, statusMessage)
 	b.i = xtox.New(toxctx)
-	SetAutoBotFeatures(b.i, FOTA_ADD_NET_HELP_BOTS|
+	SetAutoBotFeatures(b.i, FOTA_ADD_NET_HELP_BOTS|FOTA_REMOVE_ONLY_ME_INVITED|
 		FOTA_ACCEPT_FRIEND_REQUEST|FOTA_ACCEPT_GROUP_INVITE|
 		FOTA_KEEP_GROUPCHAT_TITLE)
+	gn, err := b.i.ConferenceNew()
+	gopp.ErrPrint(err)
+	gopp.Assert(gn == 0, "first group number must be 0, but is ", gn)
+	_, err = b.i.ConferenceSetTitle(gn, "TrashNoJoin")
+	gopp.ErrPrint(err)
 	b.initCallbacks()
 
 	b.groupPeerPubkeys = sync.Map{}
@@ -285,7 +290,8 @@ func (this *Btox) initCallbacks() {
 		this.tryInviteFriendToGroups(friendNumber, status)
 		if status > 0 && isGroupbotByNum(t, friendNumber) {
 			log.Println("sending cmd: info", friendNumber, status, tox.ConnStatusString(status), name)
-			t.FriendSendMessage(friendNumber, "info") // for tryFixGroupbotGroupInviteCmd
+			_, err := t.FriendSendMessage(friendNumber, "info") // for tryFixGroupbotGroupInviteCmd
+			gopp.ErrPrint(err)
 			this.StateMachineEvent("FriendConnectionStatus", friendNumber, status)
 		}
 	}, nil)

@@ -123,7 +123,7 @@ func SetAutoBotFeatures(t *tox.Tox, f int) {
 			ok := checkOnlyMeLeftGroupClean(t, groupNumber, 0, xtox.CHAT_CHANGE_PEER_DEL)
 			if ok && matchFeat(this, FOTA_REMOVE_ONLY_ME_ALL) {
 				// real delete it
-				_, err := t.ConferenceDelete(groupNumber)
+				err := toxaa.removeGroup(t, groupNumber)
 				gopp.ErrPrint(err)
 			} else if ok && matchFeat(this, FOTA_REMOVE_ONLY_ME_INVITED) {
 				if xtox.IsInvitedGroup(this, groupNumber) {
@@ -224,11 +224,19 @@ func (this *toxAutoAction) onGroupInvited(groupNumber uint32) {
 }
 
 // clear group info
-func (this *toxAutoAction) removeGroup(groupNumber uint32) {
+func (this *toxAutoAction) removeGroup(t *tox.Tox, groupNumber uint32) error {
+	groupTitlex, _ := this.initGroupNames.Load(groupNumber)
+	log.Println("removing gruop:", groupNumber, groupTitlex)
 	this.initGroupNames.Delete(groupNumber)
 	if _, ok := this.theirGroups[groupNumber]; ok {
 		delete(this.theirGroups, groupNumber)
 	}
+
+	_, err := t.ConferenceDelete(groupNumber)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // for self connection status callback
@@ -288,9 +296,7 @@ func removedInvitedGroup(t *tox.Tox, groupNumber uint32) error {
 	gopp.ErrPrint(err)
 	if xtox.IsInvitedGroup(t, uint32(groupNumber)) {
 		log.Println("Delete invited group: ", groupNumber, groupTitle)
-		delete(toxaa.theirGroups, groupNumber)
-		toxaa.initGroupNames.Delete(uint32(groupNumber))
-		_, err = t.ConferenceDelete(uint32(groupNumber))
+		toxaa.removeGroup(t, groupNumber)
 		gopp.ErrPrint(err)
 
 		// try rejoin
@@ -307,9 +313,7 @@ func removedInvitedGroupClean(t *tox.Tox, groupNumber uint32) error {
 	gopp.ErrPrint(err)
 	if xtox.IsInvitedGroup(t, groupNumber) {
 		log.Println("Delete invited group: ", groupNumber, groupTitle)
-		delete(toxaa.theirGroups, groupNumber)
-		toxaa.initGroupNames.Delete(uint32(groupNumber))
-		_, err = t.ConferenceDelete(uint32(groupNumber))
+		err = toxaa.removeGroup(t, groupNumber)
 		gopp.ErrPrint(err)
 	} else {
 		log.Println("Self created group: don't delete:", groupNumber, groupTitle)
@@ -569,9 +573,17 @@ func tryKeepGroupTitle(t *tox.Tox, groupNumber uint32, peerNumber uint32, title 
 				log.Println("Restore title:", ovalue, title)
 				// restore initilized group title
 				// 设置新title必须放在cbtitle事件循环之外设置，否则会导致死循环
-				time.AfterFunc(200*time.Millisecond, func() {
-					t.ConferenceSetTitle(groupNumber, ovalue.(string))
-				})
+				identifier, err := t.ConferenceGetIdentifier(groupNumber)
+				gopp.ErrPrint(err, ovalue, title)
+				if !xtox.ConferenceIdIsEmpty(identifier) {
+					time.AfterFunc(200*time.Millisecond, func() {
+						groupNumber, ok := xtox.ConferenceGetByIdentifier(t, identifier)
+						gopp.FalsePrint(ok, ovalue, title)
+						if ok {
+							t.ConferenceSetTitle(groupNumber, ovalue.(string))
+						}
+					})
+				}
 			}
 		}
 	} else {
