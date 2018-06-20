@@ -68,6 +68,11 @@ func (b *Birc) Command(msg *config.Message) string {
 		b.i.Handlers.Add(girc.RPL_NAMREPLY, b.storeNames)
 		b.i.Handlers.Add(girc.RPL_ENDOFNAMES, b.endNames)
 		b.i.Cmd.SendRaw("NAMES " + msg.Channel)
+	case "!ping":
+		go func() {
+			b.Remote <- config.Message{Username: b.Nick, Text: fmt.Sprintf("pong! on %s", msg.Channel),
+				Channel: msg.Channel, Account: b.Account}
+		}()
 	}
 	return ""
 }
@@ -177,6 +182,7 @@ func (b *Birc) Send(msg config.Message) (string, error) {
 	// Execute a command
 	if strings.HasPrefix(msg.Text, "!") {
 		b.Command(&msg)
+		return "", nil
 	}
 
 	// convert to specified charset
