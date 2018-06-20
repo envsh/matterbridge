@@ -1,0 +1,627 @@
+package btox
+
+import (
+	"fmt"
+	"gopp"
+	"log"
+	"math"
+	"strings"
+	"sync"
+	"time"
+
+	// tox "github.com/kitech/go-toxcore"
+	// "github.com/kitech/go-toxcore/xtox"
+	tox "github.com/TokTok/go-toxcore-c"
+	"github.com/envsh/go-toxcore/xtox"
+	"github.com/kitech/godsts/sets/hashset"
+	textdistance "github.com/masatana/go-textdistance"
+	"github.com/xrash/smetrics"
+)
+
+/*
+features:
+[x] net connection help bot, some echobot. for connection stability
+[x] auto accept group invite
+[x] auto accept frined request
+[ ] auto check friend delete me
+[x] auto remove only me left invited group chat
+[ ] auto join groupbot's group chat
+[x] auto keep groupchat title
+[ ] auto detect and show peer join/leave event
+*/
+// 是否可能在不加好友的情况下拉进群中。
+
+const (
+	FOTA_NONE                          = 0 << 0
+	FOTA_ALL                           = int(math.MaxInt64)
+	FOTA_ADD_NET_HELP_BOTS             = 1 << 0
+	FOTA_ACCEPT_GROUP_INVITE           = 1 << 1
+	FOTA_ACCEPT_FRIEND_REQUEST         = 1 << 2
+	FOTA_REMOVE_ONLY_ME_INVITED        = 1 << 3
+	FOTA_REMOVE_ONLY_ME_ALL            = 1 << 4
+	FOTA_JOIN_GROUPBOT_ROOMS           = 1 << 5
+	FOTA_CHECK_FRIEND_DELETE_ME        = 1 << 6
+	FOTA_KEEP_GROUPCHAT_TITLE          = 1 << 7
+	FOTA_SHOW_PEER_JOIN_LEAVE          = 1 << 8
+	FOTA_REMOVE_LONGTIME_NOSEE_FRIENDS = 1 << 9
+)
+
+type toxabContext struct {
+	feats            int
+	inst             *tox.Tox
+	invitings        sync.Map // friend pubkey @ room name => true
+	groupPeerPubkeys sync.Map // int => []string, groupNumber => pubkey
+}
+
+func newToxabContext(feats int, inst *tox.Tox) *toxabContext {
+	this := &toxabContext{feats: feats, inst: inst}
+	this.invitings = sync.Map{}
+	this.groupPeerPubkeys = sync.Map{}
+	return this
+}
+
+var toxabCtxs = sync.Map{} // *tox.Tox => *toxabContext
+
+func SetAutoBotFeatures(t *tox.Tox, f int) {
+	if _, loaded := toxabCtxs.LoadOrStore(t, newToxabContext(f, t)); loaded {
+		return // already exists
+	}
+	if matchFeat(t, FOTA_REMOVE_LONGTIME_NOSEE_FRIENDS) {
+		// removeLongtimeNoSeeHelperBots(t)
+	}
+
+	t.CallbackSelfConnectionStatusAdd(func(this *tox.Tox, status int, userData interface{}) {
+		if matchFeat(this, FOTA_ADD_NET_HELP_BOTS) {
+			autoAddNetHelperBots(this, status, userData)
+		}
+	}, nil)
+
+	t.CallbackFriendRequestAdd(func(this *tox.Tox, pubkey string, message string, userData interface{}) {
+		if matchFeat(this, FOTA_ACCEPT_FRIEND_REQUEST) {
+			_, err := t.FriendAddNorequest(pubkey)
+			gopp.ErrPrint(err, pubkey, message)
+		}
+	}, nil)
+
+	t.CallbackConferenceInviteAdd(func(this *tox.Tox, friendNumber uint32, itype uint8, cookie string, userData interface{}) {
+		if matchFeat(this, FOTA_ACCEPT_GROUP_INVITE) {
+			var err error
+			var groupNumber uint32
+			switch itype {
+			case tox.CONFERENCE_TYPE_TEXT:
+				groupNumber, err = t.ConferenceJoin(friendNumber, cookie)
+			case tox.CONFERENCE_TYPE_AV:
+				var groupNumber_ int
+				groupNumber_, err = t.JoinAVGroupChat(friendNumber, cookie)
+				groupNumber = uint32(groupNumber_)
+			}
+			gopp.ErrPrint(err, friendNumber, itype, cookie)
+			if err != nil {
+				toxaa.onGroupInvited(groupNumber)
+			}
+		}
+	}, nil)
+
+	t.CallbackConferenceTitleAdd(func(this *tox.Tox, groupNumber uint32, peerNumber uint32, title string, userData interface{}) {
+		if matchFeat(this, FOTA_KEEP_GROUPCHAT_TITLE) {
+			tryKeepGroupTitle(t, groupNumber, peerNumber, title)
+		}
+	}, nil)
+
+	t.CallbackConferencePeerNameAdd(func(_ *tox.Tox, groupNumber uint32, peerNumber uint32, name string, userData interface{}) {
+
+	}, nil)
+	t.CallbackConferencePeerListChangedAdd(func(this *tox.Tox, groupNumber uint32, userData interface{}) {
+		abctx, _ := toxabCtxs.Load(this)
+		pubkeysx, found := abctx.(*toxabContext).groupPeerPubkeys.Load(groupNumber)
+		if !found {
+			pubkeysx = []interface{}{}
+		}
+		_, deleted := DiffSlice(pubkeysx, t.ConferenceGetPeerPubkeys(groupNumber))
+		if len(deleted) > 0 &&
+			(matchFeat(this, FOTA_REMOVE_ONLY_ME_ALL) || matchFeat(this, FOTA_REMOVE_ONLY_ME_INVITED)) {
+			ok := checkOnlyMeLeftGroupClean(t, groupNumber, 0, xtox.CHAT_CHANGE_PEER_DEL)
+			if ok && matchFeat(this, FOTA_REMOVE_ONLY_ME_ALL) {
+				// real delete it
+				err := toxaa.removeGroup(t, groupNumber)
+				gopp.ErrPrint(err)
+			} else if ok && matchFeat(this, FOTA_REMOVE_ONLY_ME_INVITED) {
+				if xtox.IsInvitedGroup(this, groupNumber) {
+					// real delete it
+					removedInvitedGroupClean(this, groupNumber)
+				}
+			}
+		}
+		abctx.(*toxabContext).groupPeerPubkeys.Store(groupNumber, t.ConferenceGetPeerPubkeys(groupNumber))
+	}, nil)
+
+	/*
+		t.CallbackConferenceNameListChangeAdd(func(this *tox.Tox, groupNumber uint32, peerNumber uint32, change uint8, userData interface{}) {
+			ok := checkOnlyMeLeftGroupClean(t, int(groupNumber), int(peerNumber), change)
+			if ok && matchFeat(this, FOTA_REMOVE_ONLY_ME_ALL) {
+				// real delete it
+				_, err := t.ConferenceDelete(groupNumber)
+				gopp.ErrPrint(err)
+			} else if ok && matchFeat(this, FOTA_REMOVE_ONLY_ME_INVITED) {
+				if xtox.IsInvitedGroup(this, groupNumber) {
+					// real delete it
+					removedInvitedGroupClean(this, int(groupNumber))
+				}
+			}
+		}, nil)
+	*/
+}
+
+// feat匹配测试函数
+func matchFeat(this *tox.Tox, f int) bool {
+	if toxabCtxx, loaded := toxabCtxs.Load(this); loaded {
+		toxabCtx := toxabCtxx.(*toxabContext)
+		if toxabCtx.feats&f != 0 {
+			return true
+		}
+	}
+	return false
+}
+
+////////////////////////////////
+var groupbot = "56A1ADE4B65B86BCD51CC73E2CD4E542179F47959FE3E0E21B4B0ACDADE51855D34D34D37CB5"
+var lainbot = "415732B8A549B2A1F9A278B91C649B9E30F07330E8818246375D19E52F927C57F08A44E082F6"
+var kalinabot = "12EDB939AA529641CE53830B518D6EB30241868EE0E5023C46A372363CAEC91C2C948AEFE4EB"
+
+// 帮助改进p2p网络稳定的bot列表
+var nethlpbots = []string{
+	groupbot, //groupbot@toxme.io
+	"76518406F6A9F2217E8DC487CC783C25CC16A15EB36FF32E335A235342C48A39218F515C39A6", //echobot@toxme.io
+	// "7F3948BDF42F2DA68468ADA46783B392EF8ADD60E8BDE3CD04981766B5A7883747824B7108D7", //toxme@toxme.io
+	"1FC48C9D9ABD459A824AE9A8F587AB01ACF5E6234E9C46B3781C2A00699058278FD226BEF124", //toxme@toxme.io
+	"DD7A68B345E0AA918F3544AA916B5CA6AED6DE80389BFF1EF7342DACD597943D62BDEED1FC67", // my echobot
+	"03F47F0AE26BE32C73579CBA2C5421A159EDFF74535A7E8C6480398D93A0EA2E02B1B20B80D7", // DobroBot
+	"A922A51E1C91205B9F7992E2273107D47C72E8AE909C61C28A77A4A2A115431B14592AB38A3B", // toxirc
+	kalinabot, // kalinaBot@toxme.io,
+	lainbot,   // LainBot@toxme.io,
+}
+
+// TODO sync锁
+// tox 实例的一些自动化行为整理
+type toxAutoAction struct {
+	delGroupC chan uint32 // 用于删除被邀群的channel，被主tox循环使用
+
+	theirGroups map[uint32]bool // accepted group number => true
+
+	initGroupNames sync.Map // uint32=>string group number => group title
+}
+
+func newToxAutoAction() *toxAutoAction {
+	this := &toxAutoAction{}
+	this.delGroupC = make(chan uint32, 16)
+
+	this.theirGroups = make(map[uint32]bool)
+
+	return this
+}
+
+var toxaa = newToxAutoAction()
+
+func (this *toxAutoAction) initGroupNamesLen() int {
+	length := 0
+	this.initGroupNames.Range(func(key interface{}, value interface{}) bool {
+		length++
+		return true
+	})
+	return length
+}
+
+// 需要与 tox iterate并列执行的函数
+// 比如执行删除群的操作。这个操作如果在iterate中执行，会导致程序崩溃。
+func (this *toxAutoAction) iterateTasks() {
+
+}
+
+// TODO accept多次会出现什么情况
+// called in onGroupInvite, when accepted
+func (this *toxAutoAction) onGroupInvited(groupNumber uint32) {
+	this.theirGroups[groupNumber] = true
+}
+
+// clear group info
+func (this *toxAutoAction) removeGroup(t *tox.Tox, groupNumber uint32) error {
+	groupTitlex, _ := this.initGroupNames.Load(groupNumber)
+	log.Println("removing gruop:", groupNumber, groupTitlex)
+	this.initGroupNames.Delete(groupNumber)
+	if _, ok := this.theirGroups[groupNumber]; ok {
+		delete(this.theirGroups, groupNumber)
+	}
+
+	_, err := t.ConferenceDelete(groupNumber)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// for self connection status callback
+// 在本bot上线时，自动添加几个常期在线bot，能够让本bot的网络稳定些
+func autoAddNetHelperBots(t *tox.Tox, status int, d interface{}) {
+	log.Println(status, tox.ConnStatusString(status))
+	for _, bot := range nethlpbots {
+		friendNumber, err := t.FriendByPublicKey(bot)
+		if err == nil && status > tox.CONNECTION_NONE {
+			if bot == groupbot {
+				// t.FriendDelete(friendNumber)
+				// err = errors.New("hehe")
+			}
+		}
+
+		// 查找不到该好友信息，并且当前状态是连接状态
+		if err != nil && status > tox.CONNECTION_NONE {
+			ret, err := t.FriendAdd(bot, fmt.Sprintf("Hey %d, me here", friendNumber))
+			if err != nil {
+				log.Println(ret, err)
+			}
+		}
+	}
+}
+func removeLongtimeNoSeeHelperBots(t *tox.Tox) {
+	for _, bot := range nethlpbots {
+		friendNumber, err := t.FriendByPublicKey(bot)
+		if err == nil {
+			if bot == groupbot {
+				lastTime, _ := t.FriendGetLastOnline(friendNumber)
+				if uint64(time.Now().Unix())-lastTime > 30*24*3600 {
+					log.Println("long time no see, groupbot, remove it")
+					t.FriendDelete(friendNumber)
+					return
+				}
+			}
+		}
+	}
+}
+
+/*
+实现自动摘除被别人邀请，但当前只有自己在了的群组。
+*/
+func autoRemoveInvitedGroups(t *tox.Tox,
+	groupNumber uint32, peerNumber int, change uint8, ud interface{}) {
+	// this := toxaa
+
+	// check only me left case
+	checkOnlyMeLeftGroup(t, groupNumber, peerNumber, change)
+}
+
+// 被邀请的群组被删除的处理
+// 清缓存映射
+// 尝试重新加入，因为有可能是我方掉线了。
+func removedInvitedGroup(t *tox.Tox, groupNumber uint32) error {
+	groupTitle, err := t.ConferenceGetTitle(groupNumber)
+	gopp.ErrPrint(err)
+	if xtox.IsInvitedGroup(t, uint32(groupNumber)) {
+		log.Println("Delete invited group: ", groupNumber, groupTitle)
+		toxaa.removeGroup(t, groupNumber)
+		gopp.ErrPrint(err)
+
+		// try rejoin
+		tryJoinOfficalGroupbotManagedGroups(t)
+	} else {
+		log.Println("Self created group: don't delete:", groupNumber, groupTitle)
+		// 可能也是要删除的，不过删除之后要做其他的工作
+	}
+	return nil
+}
+
+func removedInvitedGroupClean(t *tox.Tox, groupNumber uint32) error {
+	groupTitle, err := t.ConferenceGetTitle(uint32(groupNumber))
+	gopp.ErrPrint(err)
+	if xtox.IsInvitedGroup(t, groupNumber) {
+		log.Println("Delete invited group: ", groupNumber, groupTitle)
+		err = toxaa.removeGroup(t, groupNumber)
+		gopp.ErrPrint(err)
+	} else {
+		log.Println("Self created group: don't delete:", groupNumber, groupTitle)
+		// 可能也是要删除的，不过删除之后要做其他的工作
+	}
+	return nil
+}
+
+// 检查群组中是否只有自己了，来自 callback name list change
+// 但是只需要关注 PEER_DEL事件
+func checkOnlyMeLeftGroup(t *tox.Tox, groupNumber uint32, _ /*peerNumber*/ int, change uint8) {
+	this := toxaa
+
+	if !checkOnlyMeLeftGroupClean(t, groupNumber, 0, change) {
+		return
+	}
+
+	groupTitle, err := t.GroupGetTitle(int(groupNumber))
+	if err != nil {
+		log.Println("wtf", err, groupNumber, change)
+	}
+
+	// var peerPubkey string
+
+	// check our create group or not
+	// 即使不是自己创建的群组，在只剩下自己之后，也可以不删除。因为这个群的所有人就是自己了。
+	// 不删除有一个不好的问题，再邀请好友的时候，由于好友有一个该group的分身，接收不到邀请请求。
+	// 这里找一下为什么程序会崩溃吧
+	if _, ok := this.theirGroups[groupNumber]; ok {
+		log.Println("invited group matched, clean it", groupNumber, groupTitle)
+		delete(this.theirGroups, groupNumber)
+		grptype, err := t.GroupGetType(uint32(groupNumber))
+		log.Println("before delete group chat", groupNumber, grptype, err)
+		switch uint8(grptype) {
+		case tox.CONFERENCE_TYPE_AV:
+			// log.Println("dont delete av groupchat for a try", groupNumber, ok, err)
+		case tox.CONFERENCE_TYPE_TEXT:
+			// ok, err := this._tox.DelGroupChat(groupNumber)
+			// log.Println("after delete group chat", groupNumber, ok, err)
+		default:
+			log.Fatal("wtf")
+		}
+		time.AfterFunc(1*time.Second, func() {
+			this.delGroupC <- groupNumber
+			// why not delete here? deadlock? crash?
+		})
+		log.Println("Rename....", groupTitle, makeDeletedGroupName(groupTitle))
+		t.GroupSetTitle(int(groupNumber), makeDeletedGroupName(groupTitle))
+		log.Println("dont delete invited groupchat for a try", groupNumber, ok, err)
+	}
+}
+
+// 干净版本的check，只做check，不做删除
+func checkOnlyMeLeftGroupClean(t *tox.Tox, groupNumber uint32, _ /*peerNumber*/ int, change uint8) bool {
+	if change != xtox.CHAT_CHANGE_PEER_DEL {
+		return false
+	}
+
+	groupTitle, err := t.GroupGetTitle(int(groupNumber))
+	if err != nil {
+		log.Println("wtf", err, groupNumber, change)
+	}
+	// var peerPubkey string
+
+	// check only me left case
+	if pn := t.GroupNumberPeers(int(groupNumber)); pn == 1 {
+		log.Println("oh, only me left:", groupNumber, groupTitle, xtox.IsInvitedGroup(t, uint32(groupNumber)))
+		// debug.PrintStack() // for get who called me
+		return true
+	}
+
+	return false
+}
+
+// 检测某个特定的peer已经离开
+func checkSpecificPeerGone() bool {
+	return false
+}
+
+// 无用群改名相关功能
+func makeDeletedGroupName(groupTitle string) string {
+	return fmt.Sprintf("#deleted_invited_groupchat_%s_%s",
+		time.Now().Format("20060102_150405"), groupTitle)
+}
+
+func isDeletedGroupName(groupTitle string) bool {
+	return strings.HasPrefix(groupTitle, "#deleted_invited_groupchat_")
+}
+
+func getDeletedGroupName(groupTitle string) string {
+	s := groupTitle[len(makeDeletedGroupName("")):]
+	return s
+}
+
+func isGroupbot(pubkey string) bool { return strings.HasPrefix(groupbot, pubkey) }
+func isGroupbotByNum(t *tox.Tox, num uint32) bool {
+	pubkey, err := t.FriendGetPublicKey(num)
+	gopp.ErrPrint(err, num)
+	return isGroupbot(pubkey)
+}
+
+// raw group name map
+var fixedGroups = map[string]string{}
+var fixedGroupsReal = map[string]string{
+	// "tox-en": "invite 0",
+	// "Official Tox groupchat": "invite 0",
+	"Tox Public Chat": "invite 0",
+	"Chinese 中文":      "invite 1",
+	// "tox-cn": "invite 1",
+	// "tox-ru": "invite 3",
+	"Club Cyberia": "invite 3",
+	// "Club Cyberia: No Pedos, No Pervs": "invite 3",
+	// "Club Cyberia: Linux General: No Pedos": "invite 4",
+	// "Russian Tox Chat (kalina@toxme.io)": "invite 3",
+	// "test autobot":                     "invite 4",
+	// "Russian Tox Chat (Use kalina@toxme.io or 12EDB939AA529641CE53830B518D6EB30241868EE0E5023C46A372363CAEC91C2C948AEFE4EB": "invite 5",
+}
+
+func init() {
+	// for test comment this line
+	fixedGroups = fixedGroupsReal
+}
+
+var skipTitleChangeWhiteList *hashset.Set = hashset.New()
+
+func init() {
+	skipTitleChangeWhiteList.Add(
+		lainbot[:64],   // lainbot
+		kalinabot[:64], // kalinabot
+		"398C8161D038FD328A573FFAA0F5FAAF7FFDE5E8B4350E7D15E6AFD0B993FC52" /* admin */)
+}
+
+// 检测是否是固定群组
+func isOfficialGroupbotManagedGroups(name string) (rname string, ok bool) {
+	for n, _ := range fixedGroups {
+		if name == n {
+			return n, true
+		}
+	}
+
+	// 再次尝试采用相似度计算法
+	for n, _ := range fixedGroups {
+		if false {
+			dis := textdistance.JaroWinklerDistance(n, name)
+			_ = dis
+		}
+
+		dis := smetrics.JaroWinkler(n, name, 0.75, 5)
+		if dis > 0.750 {
+			log.Println(n, name, dis, dis > 0.750)
+			return n, true
+		}
+	}
+
+	// 再次尝试采用前缀对比法
+	for n, _ := range fixedGroups {
+		if len(name) > 5 && strings.HasPrefix(n, name) {
+			return n, true
+		}
+	}
+	return
+}
+
+// 检查自己是否在固定群中，如果不在，则尝试发送groupbot进群消息
+// friend connection callback
+// self connection callback
+// timer callback
+func tryJoinOfficalGroupbotManagedGroups(t *tox.Tox) {
+	friendNumber, err := t.FriendByPublicKey(groupbot)
+	gopp.ErrPrint(err)
+	status, err := t.FriendGetConnectionStatus(friendNumber)
+	if status == tox.CONNECTION_NONE {
+		return
+	}
+
+	curGroups := make(map[string]int32)
+	for _, gn := range t.GetChatList() {
+		gt, _ := t.GroupGetTitle(int(gn))
+		curGroups[gt] = gn
+	}
+
+	// 查找群是否是当前的某个群，相似比较
+	incurrent := func(name string) bool {
+		for groupTitle, gn := range curGroups {
+			isInvited := xtox.IsInvitedGroup(t, uint32(gn))
+			if !isInvited { // 被邀请的群组才有查找意义
+				continue
+			}
+
+			if groupTitle == name {
+				return true
+			}
+
+			if false {
+				dis := textdistance.JaroWinklerDistance(groupTitle, name)
+				_ = dis
+			}
+			dis := smetrics.JaroWinkler(groupTitle, name, 0.75, 5)
+			if dis > 0.750 {
+				log.Println(groupTitle, name, dis, dis > 0.750)
+				return true
+			}
+
+			if strings.HasPrefix(groupTitle, name) {
+				return true
+			}
+		}
+		return false
+	}
+
+	// 不在这群，或者在这群，但只自己在了
+	// TODO 在发送前，通过info得到现有的群组列表。如果不存在这个群组，则不要发送invite了
+	for name, handler := range fixedGroups {
+		if !incurrent(name) {
+			log.Println("Try join:", name, handler)
+			n, err := t.FriendSendMessage(friendNumber, handler)
+			gopp.ErrPrint(err, n, friendNumber, name, handler)
+		}
+	}
+}
+
+func tryFixGroupbotGroupInviteCmd(t *tox.Tox, msg string) {
+	if strings.HasPrefix(msg, "Group ") &&
+		strings.Contains(msg, "peers: ") &&
+		strings.Contains(msg, "Title: ") {
+		fields := strings.Split(msg, "|")
+		gnum_s := strings.TrimSpace(fields[0][6:])
+		title := strings.TrimSpace(fields[3][7:])
+
+		newcmd := fmt.Sprintf("invite %s", gnum_s)
+		if oldcmd, ok := fixedGroups[title]; ok {
+			if newcmd != oldcmd {
+				log.Println("Update groupbot invite cmd:", newcmd, title)
+				fixedGroups[title] = newcmd
+			}
+		}
+	}
+}
+
+// 保持群组名称，防止其他用户修改标题，来自CallbackConferenceTitle
+func tryKeepGroupTitle(t *tox.Tox, groupNumber uint32, peerNumber uint32, title string) {
+	// 在这调用这个函数不安全，有时成功，有时失败
+	peerPubkey, err := t.ConferencePeerGetPublicKey(groupNumber, peerNumber)
+	_ = err
+
+	// 防止其他用户修改标题
+	// TODO 有些群组标题不能我们来管理，不能自动保持。+1
+	ovalue, ok := toxaa.initGroupNames.Load(groupNumber)
+	if ok {
+		if ovalue.(string) != title {
+			// 无法取到peerPubkey时，恢复title
+			// 或者取了peerPubkey，但不是自己时恢复title
+			// 就是说，如果取到了peerPubkey并且是自己，是可以设置新title的
+			if skipTitleChangeWhiteList.Contains(peerPubkey) {
+				log.Println("Peer in title keep whitelist, skip.")
+			} else if peerPubkey == "" || (peerPubkey != "" && peerPubkey != t.SelfGetPublicKey()) {
+				log.Println("Restore title:", ovalue, title)
+				// restore initilized group title
+				// 设置新title必须放在cbtitle事件循环之外设置，否则会导致死循环
+				identifier, err := t.ConferenceGetIdentifier(groupNumber)
+				gopp.ErrPrint(err, ovalue, title)
+				if !xtox.ConferenceIdIsEmpty(identifier) {
+					time.AfterFunc(200*time.Millisecond, func() {
+						groupNumber, ok := xtox.ConferenceGetByIdentifier(t, identifier)
+						gopp.FalsePrint(ok, ovalue, title)
+						if ok {
+							t.ConferenceSetTitle(groupNumber, ovalue.(string))
+						}
+					})
+				}
+			}
+		}
+	} else {
+		if title == "" || title == "None" {
+			log.Println("Group name not set:", groupNumber, title, toxaa.initGroupNamesLen())
+		} else {
+			log.Println("Saving initGroupNames:", groupNumber, title, toxaa.initGroupNamesLen())
+			toxaa.initGroupNames.Store(groupNumber, title)
+		}
+	}
+}
+
+// 尝试拉好友进固定群组
+// 具体进哪些群，目前只提供进 # tox-cn 群组
+// 后续如果有更强大的配置功能，可以让用户选择自动进哪些群
+func tryPullFriendFixedGroups(t *tox.Tox, friendNumber uint32, status int) {
+
+}
+
+// groupbot's response message
+func fixSpecialMessage(t *tox.Tox, friendNumber uint32, msg string) {
+	pubkey, err := t.FriendGetPublicKey(friendNumber)
+	if err != nil {
+		log.Println(err)
+	} else {
+		if isGroupbot(pubkey) {
+			if msg == "Group doesn't exist." {
+				log.Println(msg, ", try create one.")
+				t.FriendSendMessage(friendNumber, "group text")
+			} else if msg == "Invalid password." {
+				log.Println("Maybe wrong group:", msg)
+			}
+		}
+	}
+}
+
+///
+
+func toxmeLookup(name string) {
+
+}
