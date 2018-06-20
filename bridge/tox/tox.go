@@ -247,7 +247,7 @@ func (this *Btox) JoinChannel(channel config.ChannelInfo) error {
 		var gn_ uint32
 		var err error
 		if channel.Options.Key == "audio" {
-			gn_ = uint32(t.AddAVGroupChat())
+			gn_ = uint32(t.AddAVGroupChat(nil))
 		} else {
 			gn_, err = t.ConferenceNew()
 		}

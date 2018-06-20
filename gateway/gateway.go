@@ -20,6 +20,7 @@ import (
 	bsshchat "github.com/42wim/matterbridge/bridge/sshchat"
 	bsteam "github.com/42wim/matterbridge/bridge/steam"
 	btelegram "github.com/42wim/matterbridge/bridge/telegram"
+	btox "github.com/42wim/matterbridge/bridge/tox"
 	bxmpp "github.com/42wim/matterbridge/bridge/xmpp"
 	bzulip "github.com/42wim/matterbridge/bridge/zulip"
 	"github.com/hashicorp/golang-lru"
@@ -59,6 +60,7 @@ var bridgeMap = map[string]bridge.Factory{
 	"discord":    bdiscord.New,
 	"gitter":     bgitter.New,
 	"irc":        birc.New,
+	"tox":        btox.New,
 	"mattermost": bmattermost.New,
 	"matrix":     bmatrix.New,
 	"rocketchat": brocketchat.New,

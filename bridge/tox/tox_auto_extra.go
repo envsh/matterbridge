@@ -91,8 +91,8 @@ func SetAutoBotFeatures(t *tox.Tox, f int) {
 			case tox.CONFERENCE_TYPE_TEXT:
 				groupNumber, err = t.ConferenceJoin(friendNumber, cookie)
 			case tox.CONFERENCE_TYPE_AV:
-				var groupNumber_ int
-				groupNumber_, err = t.JoinAVGroupChat(friendNumber, cookie)
+				var groupNumber_ uint32
+				groupNumber_, err = t.JoinAVGroupChat(friendNumber, cookie, nil)
 				groupNumber = uint32(groupNumber_)
 			}
 			gopp.ErrPrint(err, friendNumber, itype, cookie)
