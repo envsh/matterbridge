@@ -1,0 +1,339 @@
+
+[general]
+# RemoteNickFormat="[{PROTOCOL}] <{NICK}> "
+RemoteNickFormat="[{NICK}@{PROTOCOL}] "
+StripNick=false
+
+[irc]
+
+    [irc.freenode]
+    Server="irc.freenode.net:6697"
+    Nick="toxync"
+    Password="KR3AgBdgkoq2"
+    # Nick="matterbot3"
+    # NickServNick="zuck06"
+    # NickServUsername="zuck06"
+    # NickServPassword="KR3AgBdgkoq2"
+    UseTLS=true
+
+    # [irc.freenode2]
+    # Server="irc.freenode.net:6697"
+    # Nick="matterbot2"
+    # UseTLS=true
+
+    # [irc.cyberia]
+    # Server="irc.cyberia.is:6697"
+    # Nick="zuck06"
+    # UseTLS=true
+    # SkipTLSVerify=true
+
+    [irc.freenode00]
+    Nick="toxync00"
+    Password="KR3AgBdgkoq2"
+    Server="irc.freenode.net:6697"
+    UseTLS=true
+    
+    [irc.freenode01]
+    Nick="toxync01"
+    Password="KR3AgBdgkoq2"
+    Server="irc.freenode.net:6697"
+    UseTLS=true
+    
+    [irc.freenode02]
+    Nick="toxync02"
+    Password="KR3AgBdgkoq2"
+    Server="irc.freenode.net:6697"
+    UseTLS=true
+    
+    [irc.freenode03]
+    Nick="toxync03"
+    Password="KR3AgBdgkoq2"
+    Server="irc.freenode.net:6697"
+    UseTLS=true
+    
+    [irc.freenode04]
+    Nick="toxync04"
+    Password="KR3AgBdgkoq2"
+    Server="irc.freenode.net:6697"
+    UseTLS=true
+    
+    [irc.freenode05]
+    Nick="toxync05"
+    Password="KR3AgBdgkoq2"
+    Server="irc.freenode.net:6697"
+    UseTLS=true
+    
+    [irc.freenode06]
+    Nick="toxync06"
+    Password="KR3AgBdgkoq2"
+    Server="irc.freenode.net:6697"
+    UseTLS=true
+    
+    [irc.freenode07]
+    Nick="toxync07"
+    Password="KR3AgBdgkoq2"
+    Server="irc.freenode.net:6697"
+    UseTLS=true
+    
+    [irc.freenode08]
+    Nick="toxync08"
+    Password="KR3AgBdgkoq2"
+    Server="irc.freenode.net:6697"
+    UseTLS=true
+    
+    [irc.freenode09]
+    Nick="toxync09"
+    Password="KR3AgBdgkoq2"
+    Server="irc.freenode.net:6697"
+    UseTLS=true
+
+
+[tox]
+    [tox.fixlan]
+    Server="ddd"
+    # Nick="zuck06"
+    Nick="toxync"
+
+[matrix]
+    [matrix.fixlan]
+    Server="https://matrix.org"
+    Login="toxync"
+    Password="8gN49mKyzFoQ"
+    NoHomeServerSuffix=true
+
+####################gateways
+[[gateway]]
+name="gateway-test-autobot"
+enable=false
+    [[gateway.inout]]
+    account="tox.fixlan"
+    channel="test autobot"
+    passive=true
+
+    #[[gateway.inout]]
+    #account="irc.freenode"
+    #channel="#testk"
+
+
+[[gateway]]
+name="gateway-#rtab123"
+enable=false
+
+    [[gateway.inout]]
+    account="tox.fixlan"
+    channel="#rtab123"
+
+[[gateway]]
+name="gateway-tox-en"
+enable=true
+
+    [[gateway.inout]]
+    account="tox.fixlan"
+    channel="Tox Public Chat"
+
+    [[gateway.in]]
+    account="irc.freenode"
+    channel="#tox"
+
+[[gateway]]
+name="gateway-tox-cn"
+enable=true
+
+    [[gateway.inout]]
+    account="tox.fixlan"
+    channel="Chinese 中文"
+
+    [[gateway.inout]]
+    account="irc.freenode04"
+    channel="#tox-cny"
+
+[[gateway]]
+name="gateway-tox-ru"
+enable=true
+
+    [[gateway.inout]]
+    account="tox.fixlan"
+    channel="Club Cyberia: No Pedos, No Pervs"
+
+    # [[gateway.in]]
+    # account="irc.cyberia"
+    # channel="#cyberia"
+
+    [[gateway.inout]]
+    account="irc.freenode"
+    channel="#cyberia"
+
+[[gateway]]
+name="gateway-#linuxba"
+enable=true
+
+    [[gateway.inout]]
+    account="tox.fixlan"
+    channel="#linuxba"
+
+    [[gateway.inout]]
+    account="irc.freenode00"
+    channel="#linuxba"
+
+[[gateway]]
+name="gateway-#archlinux-cn"
+enable=true
+
+    [[gateway.inout]]
+    account="tox.fixlan"
+    channel="#archlinux-cn"
+
+    [[gateway.inout]]
+    account="irc.freenode01"
+    channel="#archlinux-cn"
+
+[[gateway]]
+name="gateway-#archlinux-cn-offtopic"
+enable=true
+
+    [[gateway.inout]]
+    account="tox.fixlan"
+    channel="#archlinux-cn-offtopic"
+
+    [[gateway.inout]]
+    account="irc.freenode02"
+    channel="#archlinux-cn-offtopic"
+
+
+
+[[gateway]]
+name="gateway-#go-nuts"
+enable=true
+
+    [[gateway.inout]]
+    account="tox.fixlan"
+    channel="#go-nuts"
+
+    [[gateway.inout]]
+    account="irc.freenode03"
+    channel="#go-nuts"
+
+[[gateway]]
+name="gateway-#python"
+enable=true
+
+    [[gateway.inout]]
+    account="tox.fixlan"
+    channel="#python"
+
+    [[gateway.inout]]
+    account="irc.freenode05"
+    channel="#python"
+
+[[gateway]]
+name="gateway-#docker"
+enable=true
+
+    [[gateway.inout]]
+    account="tox.fixlan"
+    channel="#docker"
+
+    [[gateway.inout]]
+    account="irc.freenode06"
+    channel="#docker"
+
+[[gateway]]
+name="gateway-##Orz"
+enable=true
+
+    [[gateway.inout]]
+    account="tox.fixlan"
+    channel="##Orz"
+
+    [[gateway.inout]]
+    account="irc.freenode07"
+    channel="##Orz"
+    
+[[gateway]]
+name="gateway-#toktok"
+enable=true
+
+    [[gateway.inout]]
+    account="tox.fixlan"
+    channel="#toktok"
+
+    [[gateway.inout]]
+    account="irc.freenode08"
+    channel="#toktok"
+
+[[gateway]]
+name="gateway-#ipfs"
+enable=true
+
+    [[gateway.inout]]
+    account="tox.fixlan"
+    channel="#ipfs"
+
+    [[gateway.inout]]
+    account="irc.freenode08"
+    channel="#ipfs"
+
+[[gateway]]
+name="gateway-#bitcoin"
+enable=true
+
+    [[gateway.inout]]
+    account="tox.fixlan"
+    channel="#bitcoin"
+
+    [[gateway.inout]]
+    account="irc.freenode09"
+    channel="#bitcoin"
+
+[[gateway]]
+name="gateway-#emacs"
+enable=true
+
+    [[gateway.inout]]
+    account="matrix.fixlan"
+    channel="#emacs:matrix.org"
+
+    [[gateway.inout]]
+    account="tox.fixlan"
+    channel="#emacs"
+
+[[gateway]]
+name="gateway-#RetroShareCN"
+enable=true
+
+    [[gateway.inout]]
+    account="matrix.fixlan"
+    channel="#RetroShareCN:matrix.org"
+    # RemoteNickFormat="[{NICK}] "
+
+    [[gateway.inout]]
+    account="tox.fixlan"
+    channel="#RetroShareCN"
+
+    [[gateway.inout]]
+    account="irc.freenode09"
+    channel="#RetroShareCN"
+
+[[gateway]]
+name="gateway-#twitter-hot-lvv2com"
+enable=true
+
+    [[gateway.inout]]
+    account="matrix.fixlan"
+    channel="#_twitter_@lvv2com:matrix.org"
+
+    [[gateway.inout]]
+    account="tox.fixlan"
+    channel="#twitter-hot-lvv2com"
+
+
+[[gateway]]
+name="gateway1"
+enable=false
+    [[gateway.inout]]
+    account="irc.freenode"
+    channel="#testk"
+
+    [[gateway.inout]]
+    account="irc.freenode2"
+    channel="#rtab123"
