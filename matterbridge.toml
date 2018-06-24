@@ -11,7 +11,7 @@ RemoteNickFormat="{NICK}"
 # RemoteNickFormat="[{PROTOCOL}] <{NICK}> "
 RemoteNickFormat="[{NICK}@{PROTOCOL}] "
 StripNick=false
-
+DebugLevel=2
 
 [irc]
 

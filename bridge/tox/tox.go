@@ -35,6 +35,7 @@ type Btox struct {
 	frndjrman        *FriendJoinedRoomsManager
 	groupPeerPubkeys sync.Map // groupNumber => []string
 	brgCfgedRooms    map[string]bool
+	rtlimit          *RateCheck2
 }
 
 var flog *logr.Entry
@@ -97,7 +98,7 @@ func (b *Btox) extraSetup() {
 	b.frndjrman = newFriendJoinedRoomsManager(b)
 	b.frndjrman.loadConfigData()
 	b.brgCfgedRooms = make(map[string]bool)
-
+	b.rtlimit = NewRateCheck2()
 }
 
 func (this *Btox) initConfigData() {
@@ -251,6 +252,7 @@ func (this *Btox) JoinChannel(channel config.ChannelInfo) error {
 		} else {
 			gn_, err = t.ConferenceNew()
 		}
+		xtox.ConferenceSetIdentifier(t, gn_, xtox.ConferenceNameToIdentifier(channel.Name))
 
 		gopp.ErrPrint(err)
 		t.ConferenceSetTitle(gn_, channel.Name)
@@ -314,9 +316,11 @@ func (this *Btox) initCallbacks() {
 
 	t.CallbackConferenceMessage(func(_ *tox.Tox, groupNumber uint32, peerNumber uint32, message string, userData interface{}) {
 		log.Println(groupNumber, peerNumber, message)
+
 		if this.processChannelCmd(groupNumber, peerNumber, message) {
 			return
 		}
+
 		peerPubkey, err := t.ConferencePeerGetPublicKey(groupNumber, peerNumber)
 		gopp.ErrPrint(err)
 		if strings.HasPrefix(t.SelfGetAddress(), peerPubkey) {
@@ -326,15 +330,23 @@ func (this *Btox) initCallbacks() {
 		gopp.ErrPrint(err)
 		groupTitle, err := t.ConferenceGetTitle(groupNumber)
 		filterTopic := fmt.Sprintf("%s@%s", peerPubkey, groupTitle)
+
+		if isBanedUser(peerPubkey) {
+			return
+		}
 		if err := this.IsFiltered(filterTopic, message); err != nil {
 			gopp.ErrPrint(err, peerName, groupTitle)
 			return
 		}
+		if !this.rtlimit.TakeAvalible(filterTopic) {
+			return
+		}
+
 		rmsg := config.Message{Username: peerName, Channel: groupTitle, Account: this.Account, UserID: peerPubkey}
 		rmsg.Protocol = protocol
 		rmsg.Text = message
 		log.Printf("Sending message(%d) from %s on %s to gateway\n", len(message), groupTitle, this.Account)
-		this.Remote <- rmsg
+		go func() { this.Remote <- rmsg }()
 	}, nil)
 
 	t.CallbackFriendRequest(func(_ *tox.Tox, pubkey string, message string, userData interface{}) {

@@ -14,9 +14,11 @@ func (this *Btox) IsFiltered(topic, msg string) error {
 		return errors.New("explict no forward @@ hint:")
 	}
 
-	if !grc.TryPut(topic) {
-		return errors.New("rate limit exceed:" + topic)
-	}
+	/*
+		if !grc.TryPut(topic) {
+			return errors.New("rate limit exceed:" + topic)
+		}
+	*/
 
 	// TODO configure this?
 	if strings.HasSuffix(topic, "@Tox Public Chat") ||
