@@ -438,12 +438,13 @@ func init() {
 }
 
 var skipTitleChangeWhiteList *hashset.Set = hashset.New()
+var adminToxID = "398C8161D038FD328A573FFAA0F5FAAF7FFDE5E8B4350E7D15E6AFD0B993FC52"
 
 func init() {
 	skipTitleChangeWhiteList.Add(
 		lainbot[:64],   // lainbot
 		kalinabot[:64], // kalinabot
-		"398C8161D038FD328A573FFAA0F5FAAF7FFDE5E8B4350E7D15E6AFD0B993FC52" /* admin */)
+		adminToxID /* admin */)
 }
 
 // 检测是否是固定群组

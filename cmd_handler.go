@@ -57,7 +57,23 @@ func (this *Btox) processFriendCmd(friendNumber uint32, msg string) {
 	} else if strings.HasPrefix(msg, "dissolve ") { //admin
 		this.processDissolveCmd(friendNumber, msg, pubkey)
 	} else if strings.HasPrefix(msg, "ban ") {
-		this.processBanCmd(friendNumber, msg, pubkey)
+		if pubkey == adminToxID {
+			this.processBanCmd(friendNumber, msg, pubkey)
+		}
+	} else if strings.HasPrefix(msg, "unban ") {
+		if pubkey == adminToxID {
+			this.processUnbanCmd(friendNumber, msg, pubkey)
+		}
+	} else if strings.HasPrefix(msg, "banid ") {
+		if pubkey == adminToxID {
+			this.processBanidCmd(friendNumber, msg, pubkey)
+		}
+	} else if strings.HasPrefix(msg, "unbanid ") {
+		if pubkey == adminToxID {
+			this.processUnbanidCmd(friendNumber, msg, pubkey)
+		}
+	} else if msg == "baned" {
+		this.processBanedCmd(friendNumber, msg, pubkey)
 	}
 }
 
@@ -385,6 +401,7 @@ func (this *Btox) processListOnlineCmd(friendNumber uint32, msg string, pubkey s
 	}
 }
 
+// 禁止命令在所有群有效
 // 禁止的用户列，内存中存在，重启重置
 // 目前禁止的用户还不影响任何流程
 // TODO 记录入库
@@ -408,7 +425,7 @@ func (this *Btox) processBanCmd(friendNumber uint32, msg string, pubkey string) 
 	fpubkey, found := FindGroupPeerByName(t, fname)
 
 	if found {
-		banedUserList.Store(fpubkey, fname+"|"+pubkey+"|"+time.Now().String())
+		banedUserList.Store(fpubkey, fname+"|"+time.Now().String())
 	} else {
 		log.Println("ban name not exist:", msg)
 	}
@@ -417,7 +434,7 @@ func (this *Btox) processBanCmd(friendNumber uint32, msg string, pubkey string) 
 func (this *Btox) processUnbanCmd(friendNumber uint32, msg string, pubkey string) {
 	t := this.i
 
-	fname := strings.Trim(msg[4:], " ")
+	fname := strings.Trim(msg[6:], " ")
 	fpubkey, found := FindGroupPeerByName(t, fname)
 
 	if found {
@@ -426,6 +443,16 @@ func (this *Btox) processUnbanCmd(friendNumber uint32, msg string, pubkey string
 		log.Println("unban name not exist:", msg)
 	}
 
+}
+
+func (this *Btox) processBanidCmd(friendNumber uint32, msg string, pubkey string) {
+	peerid := strings.Trim(msg[6:], " ")
+	banedUserList.Store(peerid, time.Now().String())
+}
+
+func (this *Btox) processUnbanidCmd(friendNumber uint32, msg string, pubkey string) {
+	peerid := strings.Trim(msg[8:], " ")
+	banedUserList.Delete(peerid)
 }
 
 func (this *Btox) processBanedCmd(friendNumber uint32, msg string, pubkey string) {
@@ -444,5 +471,7 @@ func (this *Btox) processBanedCmd(friendNumber uint32, msg string, pubkey string
 		for _, chunk := range chunks {
 			t.FriendSendMessage(friendNumber, chunk)
 		}
+	} else {
+		t.FriendSendMessage(friendNumber, "No one is baned")
 	}
 }
