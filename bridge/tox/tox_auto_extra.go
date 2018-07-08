@@ -96,8 +96,10 @@ func SetAutoBotFeatures(t *tox.Tox, f int) {
 				groupNumber = uint32(groupNumber_)
 			}
 			gopp.ErrPrint(err, friendNumber, itype, cookie)
-			if err != nil {
-				toxaa.onGroupInvited(groupNumber)
+			if err == nil {
+				groupId, err := t.ConferenceGetIdentifier(groupNumber)
+				gopp.ErrPrint(err)
+				toxaa.onGroupInvited2(groupId)
 			}
 		}
 	}, nil)
@@ -181,21 +183,20 @@ var nethlpbots = []string{
 	lainbot,   // LainBot@toxme.io,
 }
 
-// TODO sync锁
 // tox 实例的一些自动化行为整理
 type toxAutoAction struct {
 	delGroupC chan uint32 // 用于删除被邀群的channel，被主tox循环使用
 
-	theirGroups map[uint32]bool // accepted group number => true
+	theirGroups2 map[string]bool // accepted group id => true
 
-	initGroupNames sync.Map // uint32=>string group number => group title
+	initGroupNames2 sync.Map // string=>string group id => group title
 }
 
 func newToxAutoAction() *toxAutoAction {
 	this := &toxAutoAction{}
 	this.delGroupC = make(chan uint32, 16)
 
-	this.theirGroups = make(map[uint32]bool)
+	this.theirGroups2 = make(map[string]bool)
 
 	return this
 }
@@ -204,7 +205,7 @@ var toxaa = newToxAutoAction()
 
 func (this *toxAutoAction) initGroupNamesLen() int {
 	length := 0
-	this.initGroupNames.Range(func(key interface{}, value interface{}) bool {
+	this.initGroupNames2.Range(func(key interface{}, value interface{}) bool {
 		length++
 		return true
 	})
@@ -219,20 +220,23 @@ func (this *toxAutoAction) iterateTasks() {
 
 // TODO accept多次会出现什么情况
 // called in onGroupInvite, when accepted
-func (this *toxAutoAction) onGroupInvited(groupNumber uint32) {
-	this.theirGroups[groupNumber] = true
+func (this *toxAutoAction) onGroupInvited2(groupId string) {
+	this.theirGroups2[groupId] = true
 }
 
 // clear group info
 func (this *toxAutoAction) removeGroup(t *tox.Tox, groupNumber uint32) error {
-	groupTitlex, _ := this.initGroupNames.Load(groupNumber)
-	log.Println("removing gruop:", groupNumber, groupTitlex)
-	this.initGroupNames.Delete(groupNumber)
-	if _, ok := this.theirGroups[groupNumber]; ok {
-		delete(this.theirGroups, groupNumber)
+	groupId, err := t.ConferenceGetIdentifier(groupNumber)
+	gopp.ErrPrint(err, groupNumber)
+	groupTitlex, _ := this.initGroupNames2.Load(groupNumber)
+	log.Println("removing group:", groupNumber, groupTitlex, groupId)
+	this.initGroupNames2.Delete(groupId)
+	if _, ok := this.theirGroups2[groupId]; ok {
+		delete(this.theirGroups2, groupId)
 	}
 
-	_, err := t.ConferenceDelete(groupNumber)
+	_, err = t.ConferenceDelete(groupNumber)
+	gopp.ErrPrint(err)
 	if err != nil {
 		return err
 	}
@@ -331,7 +335,10 @@ func checkOnlyMeLeftGroup(t *tox.Tox, groupNumber uint32, _ /*peerNumber*/ int, 
 		return
 	}
 
+	groupId, err := t.ConferenceGetIdentifier(groupNumber)
+	gopp.ErrPrint(err, groupNumber)
 	groupTitle, err := t.GroupGetTitle(int(groupNumber))
+	gopp.ErrPrint(err, groupNumber)
 	if err != nil {
 		log.Println("wtf", err, groupNumber, change)
 	}
@@ -342,9 +349,9 @@ func checkOnlyMeLeftGroup(t *tox.Tox, groupNumber uint32, _ /*peerNumber*/ int, 
 	// 即使不是自己创建的群组，在只剩下自己之后，也可以不删除。因为这个群的所有人就是自己了。
 	// 不删除有一个不好的问题，再邀请好友的时候，由于好友有一个该group的分身，接收不到邀请请求。
 	// 这里找一下为什么程序会崩溃吧
-	if _, ok := this.theirGroups[groupNumber]; ok {
+	if _, ok := this.theirGroups2[groupId]; ok {
 		log.Println("invited group matched, clean it", groupNumber, groupTitle)
-		delete(this.theirGroups, groupNumber)
+		delete(this.theirGroups2, groupId)
 		grptype, err := t.GroupGetType(uint32(groupNumber))
 		log.Println("before delete group chat", groupNumber, grptype, err)
 		switch uint8(grptype) {
@@ -560,9 +567,11 @@ func tryKeepGroupTitle(t *tox.Tox, groupNumber uint32, peerNumber uint32, title 
 	peerPubkey, err := t.ConferencePeerGetPublicKey(groupNumber, peerNumber)
 	_ = err
 
+	groupId, err := t.ConferenceGetIdentifier(groupNumber)
+	gopp.ErrPrint(err, groupNumber, title)
 	// 防止其他用户修改标题
 	// TODO 有些群组标题不能我们来管理，不能自动保持。+1
-	ovalue, ok := toxaa.initGroupNames.Load(groupNumber)
+	ovalue, ok := toxaa.initGroupNames2.Load(groupId)
 	if ok {
 		if ovalue.(string) != title {
 			// 无法取到peerPubkey时，恢复title
@@ -592,7 +601,7 @@ func tryKeepGroupTitle(t *tox.Tox, groupNumber uint32, peerNumber uint32, title 
 			log.Println("Group name not set:", groupNumber, title, toxaa.initGroupNamesLen())
 		} else {
 			log.Println("Saving initGroupNames:", groupNumber, title, toxaa.initGroupNamesLen())
-			toxaa.initGroupNames.Store(groupNumber, title)
+			toxaa.initGroupNames2.Store(groupId, title)
 		}
 	}
 }

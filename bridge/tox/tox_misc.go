@@ -17,6 +17,7 @@ func (this *Btox) updatePeerState(groupNumber uint32, peerNumber uint32, change 
 	groupTitled, errgt := t.ConferenceGetTitle(groupNumber)
 	peerPubkey, foundpk := xtox.ConferencePeerGetPubkey(t, groupNumber, peerNumber)
 	groupTitle, foundgt := xtox.ConferenceGetTitle(t, groupNumber)
+	groupId, foundid := xtox.ConferenceGetIdentifier(t, groupNumber)
 	gopp.ErrPrint(errpk, groupNumber, peerPubkeyd, peerNumber, change, groupTitle)
 	gopp.ErrPrint(errgt, groupNumber, groupTitled, peerNumber, change, peerPubkeyd,
 		errpk, peerPubkey, groupTitle)
@@ -36,20 +37,26 @@ func (this *Btox) updatePeerState(groupNumber uint32, peerNumber uint32, change 
 			this.frndjrman.rtJoin(peerPubkey, groupTitle)
 		}
 		if foundpk == true {
-			this.frndjrman.rtJoinByNumber(peerPubkey, groupNumber)
+			// this.frndjrman.rtJoinByNumber(peerPubkey, groupNumber)
+		}
+		if foundid == nil {
+			this.frndjrman.rtJoinByIdentifer(peerPubkey, groupId)
 		}
 		if errpk == nil {
-			this.frndjrman.rtJoinByNumber(peerPubkeyd, groupNumber)
+			// this.frndjrman.rtJoinByNumber(peerPubkeyd, groupNumber)
 		}
 	case xtox.CHAT_CHANGE_PEER_DEL:
 		if foundgt == true && foundpk == true {
 			this.frndjrman.rtLeave(peerPubkey, groupTitle)
 		}
 		if foundpk == true {
-			this.frndjrman.rtLeaveByNumber(peerPubkey, groupNumber)
+			// this.frndjrman.rtLeaveByNumber(peerPubkey, groupNumber)
 		}
 		if errpk == nil {
-			this.frndjrman.rtLeaveByNumber(peerPubkeyd, groupNumber)
+			// this.frndjrman.rtLeaveByNumber(peerPubkeyd, groupNumber)
+		}
+		if foundid == nil {
+			this.frndjrman.rtLeaveByIdentifier(peerPubkeyd, groupId)
 		}
 	}
 }
@@ -59,7 +66,8 @@ func (this *Btox) updatePeerState2(groupNumber uint32, peerPubkey string, change
 
 	groupTitled, errgt := t.ConferenceGetTitle(groupNumber)
 	groupTitle, foundgt := xtox.ConferenceGetTitle(t, groupNumber)
-	gopp.ErrPrint(errgt, groupNumber, peerPubkey, change, groupTitle)
+	groupId, foundid := xtox.ConferenceGetIdentifier(t, groupNumber)
+	gopp.ErrPrint(errgt, groupNumber, peerPubkey, change, groupTitle, foundid)
 	if !foundgt {
 		log.Println("lack info:", foundgt, groupTitle, change,
 			peerPubkey, peerPubkey, groupTitled)
@@ -68,9 +76,11 @@ func (this *Btox) updatePeerState2(groupNumber uint32, peerPubkey string, change
 	switch change {
 	case xtox.CHAT_CHANGE_PEER_ADD:
 		this.frndjrman.rtJoin(peerPubkey, groupTitle)
-		this.frndjrman.rtJoinByNumber(peerPubkey, groupNumber)
+		// this.frndjrman.rtJoinByNumber(peerPubkey, groupNumber)
+		this.frndjrman.rtJoinByIdentifer(peerPubkey, groupId)
 	case xtox.CHAT_CHANGE_PEER_DEL:
 		this.frndjrman.rtLeave(peerPubkey, groupTitle)
-		this.frndjrman.rtLeaveByNumber(peerPubkey, groupNumber)
+		// this.frndjrman.rtLeaveByNumber(peerPubkey, groupNumber)
+		this.frndjrman.rtLeaveByIdentifier(peerPubkey, groupId)
 	}
 }
