@@ -77,17 +77,18 @@ func (this *Btox) checkFriendInRoomOrInvite() {
 		// nowInRoom(pubkey, room)?
 		// shouldInRoom(pubkey, room)?
 		for gn, title := range gntitles {
+			groupId := xtox.ConferenceNameToIdentifier(title)
 			ok1 := this.frndjrman.shouldInRoom(pubkey, title)
 			if !ok1 {
 				continue
 			}
 			ok2 := this.frndjrman.nowInRoom(pubkey, title)
-			ok3 := this.frndjrman.nowInRoomByNumber(pubkey, gn)
+			ok3 := this.frndjrman.nowInRoomById(pubkey, groupId)
 
 			if ok1 && !(ok2 || ok3) {
 				// invite friendNumber to gn
-				log.Println("Friend should but not in room:", fn, fname, pubkey, gn, title,
-					gopp.Retn(this.frndjrman.rtFriendJoinedRoomNumbers.Load(pubkey)),
+				log.Println("Friend should but not in room:", fn, fname, pubkey, gn, title, groupId[:20],
+					gopp.Retn(this.frndjrman.rtFriendJoinedRoomIds.Load(pubkey)),
 					gopp.Retn(this.frndjrman.rtFriendJoinedRoomNames.Load(pubkey)))
 				_, err := t.ConferenceInvite(fn, gn)
 				gopp.ErrPrint(err)
@@ -98,11 +99,13 @@ func (this *Btox) checkFriendInRoomOrInvite() {
 
 ////// 管理好友所在的群组实时数据
 type FriendJoinedRoomsManager struct {
-	brg                        *Btox
-	rtFriendJoinedRoomNames    sync.Map // peer pubkey => room list
-	rtFriendJoinedRoomNumbers  sync.Map // peer pubkey => room numer
-	cfgFriendJoinedRoomNames   sync.Map // peer pubkey => room list
-	cfgFriendJoinedRoomNumbers sync.Map // peer pubkey => room numer
+	brg                     *Btox
+	rtFriendJoinedRoomNames sync.Map // peer pubkey => room name list
+	// rtFriendJoinedRoomNumbers  sync.Map // peer pubkey => room numer
+	rtFriendJoinedRoomIds    sync.Map // peer pubkey => room identifier
+	cfgFriendJoinedRoomNames sync.Map // peer pubkey => room name list
+	// cfgFriendJoinedRoomNumbers sync.Map // peer pubkey => room numer
+	cfgFriendJoinedRoomIds sync.Map // peer pubkey => room identifier
 }
 
 func newFriendJoinedRoomsManager(brg *Btox) *FriendJoinedRoomsManager {
@@ -149,6 +152,7 @@ func (this *FriendJoinedRoomsManager) getRtRoomSetByPubkey(pubkey string) *hashs
 	return rooms
 }
 
+/*
 func (this *FriendJoinedRoomsManager) getRtRoomNumberSetByPubkey(pubkey string) *hashset.Set {
 	var rooms *hashset.Set
 	roomsx, ok := this.rtFriendJoinedRoomNumbers.Load(pubkey)
@@ -156,6 +160,19 @@ func (this *FriendJoinedRoomsManager) getRtRoomNumberSetByPubkey(pubkey string) 
 		// 不存在，则创建并加入
 		rooms = hashset.New()
 		this.rtFriendJoinedRoomNumbers.Store(pubkey, rooms)
+	} else {
+		rooms = roomsx.(*hashset.Set)
+	}
+	return rooms
+}
+*/
+func (this *FriendJoinedRoomsManager) getRtRoomIdSetByPubkey(pubkey string) *hashset.Set {
+	var rooms *hashset.Set
+	roomsx, ok := this.rtFriendJoinedRoomIds.Load(pubkey)
+	if !ok {
+		// 不存在，则创建并加入
+		rooms = hashset.New()
+		this.rtFriendJoinedRoomIds.Store(pubkey, rooms)
 	} else {
 		rooms = roomsx.(*hashset.Set)
 	}
@@ -177,10 +194,19 @@ func (this *FriendJoinedRoomsManager) nowInRoom(pubkey, name string) bool {
 	return false
 }
 
+/*
 func (this *FriendJoinedRoomsManager) nowInRoomByNumber(pubkey string, groupNumber uint32) bool {
 	if roomsx, ok := this.rtFriendJoinedRoomNumbers.Load(pubkey); ok {
 		// log.Println(pubkey, groupNumber, roomsx.(*hashset.Set).Values())
 		return roomsx.(*hashset.Set).Contains(groupNumber)
+	}
+	return false
+}
+*/
+func (this *FriendJoinedRoomsManager) nowInRoomById(pubkey string, groupId string) bool {
+	if roomsx, ok := this.rtFriendJoinedRoomIds.Load(pubkey); ok {
+		// log.Println(pubkey, groupNumber, roomsx.(*hashset.Set).Values())
+		return roomsx.(*hashset.Set).Contains(groupId)
 	}
 	return false
 }
@@ -216,6 +242,7 @@ func (this *FriendJoinedRoomsManager) rtLeave(pubkey, name string) {
 	}
 }
 
+/*
 func (this *FriendJoinedRoomsManager) rtJoinByNumber(pubkey string, groupNumber uint32) {
 	rooms := this.getRtRoomNumberSetByPubkey(pubkey)
 	if !rooms.Contains(groupNumber) {
@@ -227,6 +254,21 @@ func (this *FriendJoinedRoomsManager) rtLeaveByNumber(pubkey string, groupNumer 
 	rooms := this.getRtRoomNumberSetByPubkey(pubkey)
 	if rooms.Contains(groupNumer) {
 		rooms.Remove(groupNumer)
+	}
+}
+*/
+
+func (this *FriendJoinedRoomsManager) rtJoinByIdentifer(pubkey string, groupId string) {
+	rooms := this.getRtRoomSetByPubkey(pubkey)
+	if !rooms.Contains(groupId) {
+		rooms.Add(groupId)
+	}
+}
+
+func (this *FriendJoinedRoomsManager) rtLeaveByIdentifier(pubkey string, groupId string) {
+	rooms := this.getRtRoomIdSetByPubkey(pubkey)
+	if rooms.Contains(groupId) {
+		rooms.Remove(groupId)
 	}
 }
 

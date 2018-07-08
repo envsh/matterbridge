@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"gopp"
 	"log"
-	"math"
 	"strings"
 	"sync"
 	"time"
@@ -232,18 +231,10 @@ func (this *Btox) JoinChannel(channel config.ChannelInfo) error {
 	}
 
 	//
-	grptitles := xtox.ConferenceAllTitles(t)
-	found := false
-	gn := uint32(math.MaxUint32)
-	for gn_, title := range grptitles {
-		log.Println(gn_, title)
-		if title == channel.Name {
-			found = true
-			gn = gn_
-		}
-	}
+	groupId := xtox.ConferenceNameToIdentifier(channel.Name)
+	gn, found := xtox.ConferenceGetByIdentifier(t, groupId)
 	if found {
-		log.Println("Already exist:", gn, channel.Name)
+		log.Println("Already exist:", gn, channel.Name, groupId[:20])
 	} else {
 		var gn_ uint32
 		var err error
@@ -252,13 +243,13 @@ func (this *Btox) JoinChannel(channel config.ChannelInfo) error {
 		} else {
 			gn_, err = t.ConferenceNew()
 		}
-		xtox.ConferenceSetIdentifier(t, gn_, xtox.ConferenceNameToIdentifier(channel.Name))
+		xtox.ConferenceSetIdentifier(t, gn_, groupId)
 
 		gopp.ErrPrint(err)
 		t.ConferenceSetTitle(gn_, channel.Name)
 		log.Println("Saving initGroupNames:", gn_, channel.Name, toxaa.initGroupNamesLen())
-		toxaa.initGroupNames.LoadOrStore(gn_, channel.Name)
-		log.Println("New group created:", gn_, channel.Name)
+		toxaa.initGroupNames2.LoadOrStore(groupId, channel.Name)
+		log.Println("New group created:", gn_, channel.Name, groupId[:20])
 	}
 	return nil
 }
