@@ -428,7 +428,7 @@ var fixedGroupsReal = map[string]string{
 	// "tox-en": "invite 0",
 	// "Official Tox groupchat": "invite 0",
 	"Tox Public Chat": "invite 0",
-	"Chinese 中文":      "invite 1",
+	// "Chinese 中文":      "invite 1",
 	// "tox-cn": "invite 1",
 	// "tox-ru": "invite 3",
 	"Club Cyberia": "invite 3",
