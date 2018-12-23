@@ -226,9 +226,12 @@ func (this *toxAutoAction) onGroupInvited2(groupId string) {
 
 // clear group info
 func (this *toxAutoAction) removeGroup(t *tox.Tox, groupNumber uint32) error {
-	groupId, err := t.ConferenceGetIdentifier(groupNumber)
+	groupId, err := xtox.ConferenceGetIdentifier(t, groupNumber)
 	gopp.ErrPrint(err, groupNumber)
 	groupTitlex, _ := this.initGroupNames2.Load(groupNumber)
+	if xtox.ConferenceIdIsEmpty(groupId) {
+		// log.Panicln(groupNumber, groupTitlex)
+	}
 	log.Println("removing group:", groupNumber, groupTitlex, groupId)
 	this.initGroupNames2.Delete(groupId)
 	if _, ok := this.theirGroups2[groupId]; ok {
@@ -431,7 +434,7 @@ var fixedGroupsReal = map[string]string{
 	// "Chinese 中文":      "invite 1",
 	// "tox-cn": "invite 1",
 	// "tox-ru": "invite 3",
-	"Club Cyberia": "invite 3",
+	// "Club Cyberia": "invite 3",
 	// "Club Cyberia: No Pedos, No Pervs": "invite 3",
 	// "Club Cyberia: Linux General: No Pedos": "invite 4",
 	// "Russian Tox Chat (kalina@toxme.io)": "invite 3",
