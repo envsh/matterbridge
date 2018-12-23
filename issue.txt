@@ -1,3 +1,13 @@
+### ========== too many open files
+// time="2018-07-23T07:46:30Z" level=info msg="Reconnecting irc.freenode04" prefix=gateway
+// time="2018-07-23T07:47:00Z" level=info msg="Reconnecting irc.freenode11" prefix=gateway
+// matterbri 5252 gzleo 1023u     sock      0,9      0t0 42772615 protocol: TCP
+// ESTAB     119667  0                  127.0.0.1:52924            127.0.0.1:16667
+time="2018-07-23T10:08:01Z" level=info msg="Reconnecting irc.freenode11" prefix=gateway                                          
+time="2018-07-23T10:08:01Z" level=info msg="Connecting 127.0.0.1:16667 nick: toxync11-" prefix=irc                               
+time="2018-07-23T10:08:01Z" level=info msg="false false" prefix=irc                                                              
+time="2018-07-23T10:08:01Z" level=error msg="Reconnection failed: dial tcp 127.0.0.1:16667: socket: too many open files. Trying again in 60 seconds" prefix=gateway
+
 ###  ":barjavel.freenode.net 477 zuck06 #go-nuts :Cannot join channel (+r) - you need to be identified with services"
 
 /msg nickserv register [password] [email]

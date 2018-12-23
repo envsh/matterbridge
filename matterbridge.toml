@@ -69,9 +69,9 @@ enable=true
     account="irc.freenode21"
     channel="#testk"
 
-    [[gateway.inout]]
-    account="matrix.fixlan"
-    channel="#testk:matrix.org"
+#    [[gateway.inout]]
+#    account="matrix.fixlan"
+#    channel="#testk:matrix.org"
 
     [[gateway.inout]]
     account="api.local"

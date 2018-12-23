@@ -67,10 +67,10 @@ func (this *Btox) updatePeerState2(groupNumber uint32, peerPubkey string, change
 	groupTitled, errgt := t.ConferenceGetTitle(groupNumber)
 	groupTitle, foundgt := xtox.ConferenceGetTitle(t, groupNumber)
 	groupId, foundid := xtox.ConferenceGetIdentifier(t, groupNumber)
-	gopp.ErrPrint(errgt, groupNumber, peerPubkey, change, groupTitle, foundid)
+	gopp.ErrPrint(errgt, groupNumber, peerPubkey[:20], change, groupTitle, foundid)
 	if !foundgt {
 		log.Println("lack info:", foundgt, groupTitle, change,
-			peerPubkey, peerPubkey, groupTitled)
+			peerPubkey[:20], groupTitled)
 	}
 
 	switch change {

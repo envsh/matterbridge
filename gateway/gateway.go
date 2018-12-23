@@ -131,6 +131,7 @@ RECONNECT:
 	err := br.Connect()
 	if err != nil {
 		flog.Errorf("Reconnection failed: %s. Trying again in 60 seconds", err)
+		br.Disconnect()
 		time.Sleep(time.Second * 60)
 		goto RECONNECT
 	}
