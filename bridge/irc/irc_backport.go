@@ -121,7 +121,7 @@ func (b *Birc) Connect() error {
 	// clear on reconnects
 	i.ClearCallback(ircm.RPL_WELCOME)
 	i.AddCallback(ircm.RPL_WELCOME, func(event *irc.Event) {
-		b.Remote <- config.Message{Username: "system", Text: "rejoin", Channel: "", Account: b.Account, Event: config.EVENT_REJOIN_CHANNELS}
+		b.Remote <- config.Message{Username: "system", Text: "rejoin", Channel: "", Account: b.Account, Event: config.EventRejoinChannels}
 		// set our correct nick on reconnect if necessary
 		b.Nick = event.Nick
 	})
@@ -157,7 +157,7 @@ func (b *Birc) JoinChannel(channel config.ChannelInfo) error {
 
 func (b *Birc) Send(msg config.Message) (string, error) {
 	// ignore delete messages
-	if msg.Event == config.EVENT_MSG_DELETE {
+	if msg.Event == config.EventMsgDelete {
 		return "", nil
 	}
 	b.Log.Debugf("Receiving %#v", msg)
@@ -199,7 +199,7 @@ func (b *Birc) doSend() {
 	throttle := time.NewTicker(rate)
 	for msg := range b.Local {
 		<-throttle.C
-		if msg.Event == config.EVENT_USER_ACTION {
+		if msg.Event == config.EventUserAction {
 			b.i.Action(msg.Channel, msg.Username+msg.Text)
 		} else {
 			b.i.Privmsg(msg.Channel, msg.Username+msg.Text)
@@ -251,19 +251,19 @@ func (b *Birc) handleJoinPart(event *irc.Event) {
 	channel := event.Arguments[0]
 	if event.Code == "KICK" {
 		b.Log.Infof("Got kicked from %s by %s", channel, event.Nick)
-		b.Remote <- config.Message{Username: "system", Text: "rejoin", Channel: channel, Account: b.Account, Event: config.EVENT_REJOIN_CHANNELS}
+		b.Remote <- config.Message{Username: "system", Text: "rejoin", Channel: channel, Account: b.Account, Event: config.EventRejoinChannels}
 		return
 	}
 	if event.Code == "QUIT" {
 		if event.Nick == b.Nick && strings.Contains(event.Raw, "Ping timeout") {
 			b.Log.Infof("%s reconnecting ..", b.Account)
-			b.Remote <- config.Message{Username: "system", Text: "reconnect", Channel: channel, Account: b.Account, Event: config.EVENT_FAILURE}
+			b.Remote <- config.Message{Username: "system", Text: "reconnect", Channel: channel, Account: b.Account, Event: config.EventFailure}
 			return
 		}
 	}
 	if event.Nick != b.Nick {
 		b.Log.Debugf("Sending JOIN_LEAVE event from %s to gateway", b.Account)
-		b.Remote <- config.Message{Username: "system", Text: event.Nick + " " + strings.ToLower(event.Code) + "s", Channel: channel, Account: b.Account, Event: config.EVENT_JOIN_LEAVE}
+		b.Remote <- config.Message{Username: "system", Text: event.Nick + " " + strings.ToLower(event.Code) + "s", Channel: channel, Account: b.Account, Event: config.EventJoinLeave}
 		return
 	}
 	b.Log.Debugf("handle %#v", event)
@@ -311,7 +311,7 @@ func (b *Birc) handlePrivMsg(event *irc.Event) {
 	msg := ""
 	if event.Code == "CTCP_ACTION" {
 		//	msg = event.Nick + " "
-		rmsg.Event = config.EVENT_USER_ACTION
+		rmsg.Event = config.EventUserAction
 	}
 	msg += event.Message()
 	// strip IRC colors

@@ -14,6 +14,7 @@
 # mrgtool.sh
 # appcontext.go
 # bridge/irc/irc_backport.go
+# bridge/irc/helper.go
 
 oldbr=withtox-ups1.11
 newbr=withtox-ups1.12
@@ -48,8 +49,10 @@ if [ -f "mrgtool.sh.new" ]; then
     cp mrgtool.sh{.new,} # bump version modify
 fi
 git checkout  $oldbr bridge/irc/irc_backport.go
-git mv brige/irc/irc.go{,.bak}
+git checkout  $oldbr bridge/irc/helper.go
+git mv bridge/irc/irc.go{,.bak}
 git checkout $oldbr vendor/github.com/sorcix/irc
+git checkout $oldbr vendor/github.com/42wim/go-ircevent
 
 git commit -a -m "mrg raw files for $newbr"
 

@@ -12,6 +12,7 @@ import (
 	"github.com/42wim/matterbridge/bridge/config"
 	"github.com/42wim/matterbridge/bridge/helper"
 	logr "github.com/Sirupsen/logrus"
+
 	// tox "github.com/kitech/go-toxcore"
 	tox "github.com/TokTok/go-toxcore-c"
 	"github.com/envsh/go-toxcore/xtox"
@@ -191,7 +192,7 @@ func (this *Btox) _SendImpl(channel, msgText string, msgEvent string) {
 		for _, gn := range gns {
 			groupTitle, _ := t.ConferenceGetTitle(gn)
 			for _, tmsg := range tmsgs {
-				if msgEvent == config.EVENT_USER_ACTION {
+				if msgEvent == config.EventUserAction {
 					tmsg = "/me " + tmsg
 					_, err := t.ConferenceSendMessage(gn, tox.MESSAGE_TYPE_ACTION, tmsg)
 					gopp.ErrPrint(err, gn, groupTitle, len(tmsg))

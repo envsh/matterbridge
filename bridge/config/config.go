@@ -160,6 +160,7 @@ type SameChannelGateway struct {
 type BridgeValues struct {
 	API                map[string]Protocol
 	IRC                map[string]Protocol
+	Tox                map[string]Protocol
 	Mattermost         map[string]Protocol
 	Matrix             map[string]Protocol
 	Slack              map[string]Protocol

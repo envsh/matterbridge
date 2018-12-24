@@ -19,6 +19,7 @@ var (
 )
 
 func main() {
+	printBuildInfo(true)
 	log.SetFormatter(&prefixed.TextFormatter{PrefixPadding: 13, DisableColors: true, FullTimestamp: true})
 	flog := log.WithFields(log.Fields{"prefix": "main"})
 	flagConfig := flag.String("conf", "matterbridge.toml", "config file")
