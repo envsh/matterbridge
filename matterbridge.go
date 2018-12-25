@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/42wim/matterbridge/appexp"
 	"github.com/42wim/matterbridge/bridge/config"
 	"github.com/42wim/matterbridge/gateway"
 	"github.com/google/gops/agent"
@@ -55,6 +56,6 @@ func main() {
 		flog.Fatalf("Starting gateway failed: %s", err)
 	}
 	flog.Printf("Gateway(s) started succesfully. Now relaying messages")
-	StartAppContext(cfg, r)
+	appexp.StartAppContext(cfg, r)
 	select {}
 }

@@ -12,7 +12,7 @@
 # VERSION
 # buildinfo.go
 # mrgtool.sh
-# appcontext.go
+# appexp/
 # bridge/irc/irc_backport.go
 # bridge/irc/helper.go
 
@@ -42,8 +42,7 @@ git checkout  $oldbr issue.txt
 git checkout  $oldbr toxbrg.sqlite3
 git checkout  $oldbr VERSION
 git checkout  $oldbr buildinfo.go
-#git checkout  $oldbr appcontext.go
-#git checkout  $oldbr logrus-with-filename.go
+git checkout  $oldbr appexp/
 git checkout  $oldbr mrgtool.sh
 if [ -f "mrgtool.sh.new" ]; then
     cp mrgtool.sh{.new,} # bump version modify
