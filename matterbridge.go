@@ -55,5 +55,6 @@ func main() {
 		flog.Fatalf("Starting gateway failed: %s", err)
 	}
 	flog.Printf("Gateway(s) started succesfully. Now relaying messages")
+	StartAppContext(cfg, r)
 	select {}
 }

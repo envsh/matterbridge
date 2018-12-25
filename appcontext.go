@@ -18,9 +18,13 @@ func init() {
 // usage:
 /*
 matterbridge.go:57
-       appctx = &AppContext{cfg, r}
-       appctx.Start()
+       AppcontextMain(cfg, r)
 */
+func StartAppContext(c config.Config, r *gateway.Router) {
+	appctx = &AppContext{c, r}
+	appctx.Start()
+}
+
 var appctx *AppContext
 
 type AppContext struct {
