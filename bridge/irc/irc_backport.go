@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/42wim/go-ircevent"
+	irc "github.com/42wim/go-ircevent"
 	"github.com/42wim/matterbridge/bridge"
 	"github.com/42wim/matterbridge/bridge/config"
 	log "github.com/Sirupsen/logrus"
@@ -123,7 +123,11 @@ func (b *Birc) Connect() error {
 	i.AddCallback(ircm.RPL_WELCOME, func(event *irc.Event) {
 		b.Remote <- config.Message{Username: "system", Text: "rejoin", Channel: "", Account: b.Account, Event: config.EventRejoinChannels}
 		// set our correct nick on reconnect if necessary
-		b.Nick = event.Nick
+		if event.Nick == "" {
+			b.Log.Infof("Invalid or empty nick ", b.Nick)
+		} else {
+			b.Nick = event.Nick
+		}
 	})
 	go i.Loop()
 	go b.doSend()
@@ -131,6 +135,7 @@ func (b *Birc) Connect() error {
 }
 
 func (b *Birc) Disconnect() error {
+	b.Log.Infof("Disconnecting server: %s nick: %s", b.GetString("Server"), b.Nick)
 	defer func() {
 		if err := recover(); err != nil {
 			var cok bool
@@ -140,9 +145,35 @@ func (b *Birc) Disconnect() error {
 			b.Log.Errorln("somepanic", err, b.i == nil, cok)
 		}
 	}()
+	b.clearCallbacks()
 	b.i.Disconnect()
+	if b.i.Connected() {
+		b.Log.Warnf("Must not connected server: %s nick: %s", b.GetString("Server"), b.Nick)
+	}
 	close(b.Local)
 	return nil
+}
+func (b *Birc) clearCallbacks() {
+	i := b.i
+	if i == nil {
+		return
+	}
+	i.ClearCallback(ircm.RPL_WELCOME)
+	i.ClearCallback(ircm.RPL_ENDOFMOTD)
+	i.ClearCallback(ircm.RPL_NAMREPLY)
+	i.ClearCallback(ircm.RPL_ENDOFNAMES)
+
+	i.ClearCallback("PRIVMSG")
+	i.ClearCallback("CTCP_ACTION")
+	i.ClearCallback(ircm.RPL_TOPICWHOTIME)
+	i.ClearCallback(ircm.NOTICE)
+	i.ClearCallback(ircm.RPL_MYINFO)
+	i.ClearCallback("PING")
+	i.ClearCallback("JOIN")
+	i.ClearCallback("PART")
+	i.ClearCallback("QUIT")
+	i.ClearCallback("KICK")
+	i.ClearCallback("*")
 }
 
 func (b *Birc) JoinChannel(channel config.ChannelInfo) error {

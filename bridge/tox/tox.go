@@ -307,7 +307,11 @@ func (this *Btox) initCallbacks() {
 	}, nil)
 
 	t.CallbackConferenceMessage(func(_ *tox.Tox, groupNumber uint32, peerNumber uint32, message string, userData interface{}) {
-		log.Println(groupNumber, peerNumber, message)
+		isselfsent := xtox.IsSelfGroupMessage(t, int(groupNumber), int(peerNumber))
+		log.Println(groupNumber, peerNumber, message, isselfsent)
+		if isselfsent {
+			return
+		}
 
 		if this.processChannelCmd(groupNumber, peerNumber, message) {
 			return
